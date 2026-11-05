@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CampusConnect — Login</title>
+    <link rel="stylesheet" href="css/login.css">
+</head>
+<body>
+    <main>
+        <h1>CampusConnect</h1>
+        <p>Teacher Consultation Booking System</p>
+
+        <section aria-labelledby="role-heading">
+            <h2 id="role-heading">Choose your section</h2>
+
+            <div>
+                <button type="button" class="role-choice" data-role="student">
+                    Student
+                </button>
+
+                <button type="button" class="role-choice" data-role="teacher">
+                    Teacher
+                </button>
+            </div>
+        </section>
+
+        <section id="auth-panel" hidden>
+            <h2 id="selected-role-heading">Login</h2>
+
+            <div>
+                <button type="button" id="show-login-button">
+                    Login
+                </button>
+                <button type="button" id="show-register-button">
+                    Create account
+                </button>
+            </div>
+
+            <form id="login-form">
+                <label for="login-email">Email</label>
+                <input
+                    id="login-email"
+                    name="email"
+                    type="email"
+                    autocomplete="email"
+                    required
+                >
+
+                <label for="login-password">Password</label>
+                <input
+                    id="login-password"
+                    name="password"
+                    type="password"
+                    autocomplete="current-password"
+                    required
+                >
+
+                <button type="submit">Login</button>
+            </form>
+
+            <form id="register-form" hidden>
+                <label for="register-name">Full name</label>
+                <input
+                    id="register-name"
+                    name="full_name"
+                    type="text"
+                    autocomplete="name"
+                    required
+                >
+
+                <label for="register-email">Email</label>
+                <input
+                    id="register-email"
+                    name="email"
+                    type="email"
+                    autocomplete="email"
+                    required
+                >
+
+                <label for="register-password">Password</label>
+                <input
+                    id="register-password"
+                    name="password"
+                    type="password"
+                    autocomplete="new-password"
+                    minlength="8"
+                    required
+                >
+
+                <div id="student-fields" hidden>
+                    <label for="student-id">Student ID</label>
+                    <input id="student-id" name="student_id" type="text">
+
+                    <label for="department">Department</label>
+                    <input id="department" name="department" type="text">
+                </div>
+
+                <div id="teacher-fields" hidden>
+                    <label for="teacher-code">Teacher invitation code</label>
+                    <input
+                        id="teacher-code"
+                        name="teacher_code"
+                        type="password"
+                        autocomplete="off"
+                    >
+                </div>
+
+                <button type="submit">Create account</button>
+            </form>
+
+            <p id="auth-status" role="status" aria-live="polite"></p>
+        </section>
+    </main>
+
+    <script type="module" src="js/login.js"></script>
+</body>
+</html>

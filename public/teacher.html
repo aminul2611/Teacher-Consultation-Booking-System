@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CampusConnect | Teacher Panel</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <h1>CampusConnect</h1>
+        <p>Teacher Consultation Booking System</p>
+    </header>
+
+    <main>
+        <section id="add-slot-section">
+            <h2>Add a Consultation Slot</h2>
+
+            <form id="slot-form">
+                <label for="teacher-name">Teacher Name</label>
+                <input id="teacher-name" name="teacher-name" required>
+
+                <label for="department">Department</label>
+                <input id="department" name="department" required>
+
+                <label for="slot-date">Date</label>
+                <input id="slot-date" name="slot-date" type="date" required>
+
+                <label for="start-time">Start Time</label>
+                <input id="start-time" name="start-time" type="time" required>
+
+                <label for="end-time">End Time</label>
+                <input id="end-time" name="end-time" type="time" required>
+
+                <button type="submit">Add Slot</button>
+            </form>
+
+            <p id="slot-status" role="status"></p>
+        </section>
+
+        <section id="appointments-section">
+            <h2>Appointments</h2>
+
+            <button id="load-appointments-button" type="button">
+                Load Appointments
+            </button>
+
+            <div id="appointments-list">
+                <p>Appointments will appear here.</p>
+            </div>
+        </section>
+    </main>
+<script src="js/teacher.js"></script>
+</body>
+</html>

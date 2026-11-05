@@ -1,0 +1,361 @@
+:root {
+    font-family: Arial, sans-serif;
+    color: #18304d;
+    background: #f3f6fb;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    --navy: #142b45;
+    --blue: #2864c5;
+    --blue-light: #eaf1ff;
+    --border: #dce4ef;
+    --muted: #697b91;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    min-width: 320px;
+    min-height: 100vh;
+    margin: 0;
+}
+
+button,
+input,
+textarea {
+    font: inherit;
+}
+
+.app-shell {
+    display: grid;
+    grid-template-columns: minmax(280px, 0.82fr) minmax(470px, 1.18fr);
+    width: min(1200px, calc(100% - 40px));
+    min-height: 720px;
+    margin: 24px auto;
+    overflow: hidden;
+    background: #ffffff;
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    box-shadow: 0 18px 55px rgba(24, 48, 77, 0.1);
+}
+
+.brand-panel {
+    display: flex;
+    flex-direction: column;
+    padding: 32px;
+    color: #ffffff;
+    background:
+        radial-gradient(circle at 15% 85%, rgba(76, 118, 175, 0.22), transparent 35%),
+        var(--navy);
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.brand-mark {
+    display: grid;
+    width: 46px;
+    height: 46px;
+    place-items: center;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 13px;
+    color: #ffffff;
+    font-weight: 700;
+}
+
+.brand h1 {
+    margin: 0 0 4px;
+    font-size: 17px;
+}
+
+.brand p {
+    margin: 0;
+    color: #d5e0ef;
+    font-size: 13px;
+}
+
+.brand-message {
+    margin: auto 0;
+    padding: 56px 0;
+}
+
+.eyebrow {
+    color: var(--blue);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.13em;
+}
+
+.brand-panel .eyebrow {
+    color: #a9caff;
+}
+
+.brand-message h2 {
+    max-width: 330px;
+    margin: 20px 0 14px;
+    color: #ffffff;
+    font-size: clamp(30px, 4vw, 44px);
+    line-height: 1.12;
+}
+
+.brand-message > p:not(.eyebrow) {
+    max-width: 350px;
+    color: #d5e0ef;
+    font-size: 14px;
+    line-height: 1.8;
+}
+
+.brand-message ul {
+    display: grid;
+    gap: 17px;
+    margin: 30px 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.brand-message li {
+    color: #e8eff8;
+    font-size: 13px;
+}
+
+.brand-message li::before {
+    content: "✓";
+    display: inline-grid;
+    width: 25px;
+    height: 25px;
+    margin-right: 10px;
+    place-items: center;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.brand-footer {
+    margin: 0;
+    color: #bdcde0;
+    font-size: 11px;
+}
+
+.workspace {
+    padding: 42px clamp(26px, 5vw, 58px);
+    background: #ffffff;
+}
+
+.workspace > .eyebrow {
+    margin: 3px 0 12px;
+}
+
+.workspace > h2 {
+    margin: 0 0 8px;
+    color: var(--navy);
+    font-size: 28px;
+}
+
+.page-description {
+    margin: 0 0 24px;
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.role-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin-bottom: 22px;
+    padding: 5px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: #f4f6fa;
+}
+
+.role-tab {
+    min-height: 42px;
+    border: 1px solid transparent;
+    border-radius: 9px;
+    background: transparent;
+    color: #617187;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.role-tab.active {
+    border-color: #cddcf5;
+    background: #ffffff;
+    color: var(--blue);
+    font-weight: 700;
+    box-shadow: 0 2px 7px rgba(24, 48, 77, 0.06);
+}
+
+.workspace-panel {
+    padding: 22px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: #ffffff;
+}
+
+.workspace-panel h3 {
+    margin: 0 0 8px;
+    color: var(--navy);
+    font-size: 19px;
+}
+
+.workspace-panel h4 {
+    margin: 24px 0 12px;
+    color: var(--navy);
+    font-size: 15px;
+}
+
+.workspace-panel > p {
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+label {
+    display: block;
+    margin: 14px 0 6px;
+    color: #40536b;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+input,
+textarea {
+    display: block;
+    width: 100%;
+    min-height: 42px;
+    padding: 10px 12px;
+    border: 1px solid #d2dce9;
+    border-radius: 9px;
+    background: #ffffff;
+    color: #18304d;
+}
+
+textarea {
+    min-height: 82px;
+    resize: vertical;
+}
+
+input:focus,
+textarea:focus {
+    border-color: #6d98df;
+    outline: 3px solid #e8f0ff;
+}
+
+button[type="submit"],
+#load-slots-button,
+#load-appointments-button,
+.book-slot-button {
+    min-height: 42px;
+    margin-top: 14px;
+    padding: 0 16px;
+    border: 0;
+    border-radius: 9px;
+    background: var(--blue);
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+button[type="submit"]:hover,
+#load-slots-button:hover,
+#load-appointments-button:hover,
+.book-slot-button:hover {
+    background: #1e52a4;
+}
+
+#cancel-booking-button {
+    min-height: 42px;
+    margin: 14px 0 0 6px;
+    padding: 0 15px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    background: #ffffff;
+    color: #435872;
+    cursor: pointer;
+}
+
+#slots-list article,
+#appointments-list article {
+    margin-top: 13px;
+    padding: 15px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: #f9fbfe;
+}
+
+#slots-list article h3,
+#appointments-list article h3 {
+    margin-bottom: 7px;
+    font-size: 15px;
+}
+
+#slots-list article p,
+#appointments-list article p {
+    margin: 5px 0;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+#booking-section {
+    margin-top: 22px;
+    padding-top: 18px;
+    border-top: 1px solid var(--border);
+}
+
+#status-message,
+#slot-status {
+    color: #176b4d;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+[hidden] {
+    display: none !important;
+}
+
+@media (max-width: 800px) {
+    .app-shell {
+        grid-template-columns: 1fr;
+        width: min(620px, calc(100% - 24px));
+        min-height: auto;
+        margin: 12px auto;
+    }
+
+    .brand-panel {
+        min-height: 260px;
+        padding: 24px;
+    }
+
+    .brand-message {
+        padding: 34px 0 26px;
+    }
+
+    .brand-message h2 {
+        font-size: 32px;
+    }
+
+    .brand-message ul {
+        gap: 10px;
+        margin-top: 20px;
+    }
+
+    .workspace {
+        padding: 28px 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .workspace-panel {
+        padding: 17px;
+    }
+
+    .workspace > h2 {
+        font-size: 24px;
+    }
+}

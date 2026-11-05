@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CampusConnect</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="app-shell">
+        <aside class="brand-panel">
+            <div class="brand">
+                <div class="brand-mark">CC</div>
+                <div>
+                    <h1>CampusConnect</h1>
+                    <p>Your campus, connected.</p>
+                </div>
+            </div>
+
+            <div class="brand-message">
+                <p class="eyebrow">TEACHER CONSULTATION BOOKING</p>
+                <h2>Connect with your teachers.</h2>
+                <p>
+                    Find a convenient consultation time or manage
+                    your available hours.
+                </p>
+
+                <ul>
+                    <li>View available consultation slots</li>
+                    <li>Book an appointment without an account</li>
+                    <li>Manage appointments in one place</li>
+                </ul>
+            </div>
+
+            <p class="brand-footer">CampusConnect · Distributed RPC Project</p>
+        </aside>
+
+        <main class="workspace">
+            <p class="eyebrow">CAMPUS CONSULTATION PORTAL</p>
+            <h2>Choose your workspace</h2>
+            <p class="page-description">
+                Select Student or Teacher to continue. No login is required.
+            </p>
+
+            <div class="role-tabs" role="tablist">
+                <button
+                    id="student-tab"
+                    class="role-tab active"
+                    type="button"
+                    role="tab"
+                    aria-selected="true"
+                    aria-controls="student-panel"
+                >
+                    Student
+                </button>
+
+                <button
+                    id="teacher-tab"
+                    class="role-tab"
+                    type="button"
+                    role="tab"
+                    aria-selected="false"
+                    aria-controls="teacher-panel"
+                >
+                    Teacher
+                </button>
+            </div>
+
+            <section
+                id="student-panel"
+                class="workspace-panel"
+                role="tabpanel"
+                aria-labelledby="student-tab"
+            >
+                <h3>Student Consultation</h3>
+                <p>View open times and book a consultation with a teacher.</p>
+
+                <button id="load-slots-button" type="button">
+                    Load Available Slots
+                </button>
+
+                <div id="slots-list">
+                    <p>Available slots will appear here.</p>
+                </div>
+
+                <section id="booking-section" hidden>
+                    <h3>Book an Appointment</h3>
+                    <p id="selected-slot-details"></p>
+
+                    <form id="booking-form">
+                        <input id="selected-slot-id" type="hidden">
+
+                        <label for="student-name">Student Name</label>
+                        <input id="student-name" name="student-name" required>
+
+                        <label for="student-id">Student ID</label>
+                        <input id="student-id" name="student-id" required>
+
+                        <label for="discussion-topic">Discussion Topic</label>
+                        <textarea
+                            id="discussion-topic"
+                            name="discussion-topic"
+                            required
+                        ></textarea>
+
+                        <button type="submit">Confirm Booking</button>
+                        <button id="cancel-booking-button" type="button">
+                            Cancel
+                        </button>
+                    </form>
+                </section>
+            </section>
+
+            <section
+                id="teacher-panel"
+                class="workspace-panel"
+                role="tabpanel"
+                aria-labelledby="teacher-tab"
+                hidden
+            >
+                <h3>Teacher Workspace</h3>
+                <p>Add consultation hours and review student appointments.</p>
+
+                <h4>Add a Consultation Slot</h4>
+
+                <form id="slot-form">
+                    <label for="teacher-name">Teacher Name</label>
+                    <input id="teacher-name" name="teacher-name" required>
+
+                    <label for="department">Department</label>
+                    <input id="department" name="department" required>
+
+                    <label for="slot-date">Date</label>
+                    <input id="slot-date" name="slot-date" type="date" required>
+
+                    <label for="start-time">Start Time</label>
+                    <input
+                        id="start-time"
+                        name="start-time"
+                        type="time"
+                        required
+                    >
+
+                    <label for="end-time">End Time</label>
+                    <input
+                        id="end-time"
+                        name="end-time"
+                        type="time"
+                        required
+                    >
+
+                    <button type="submit">Add Slot</button>
+                </form>
+
+                <p id="slot-status" role="status"></p>
+
+                <h4>Appointments</h4>
+                <button id="load-appointments-button" type="button">
+                    Load Appointments
+                </button>
+
+                <div id="appointments-list">
+                    <p>Appointments will appear here.</p>
+                </div>
+            </section>
+
+            <p id="status-message" role="status"></p>
+        </main>
+    </div>
+<script src="js/tabs.js"></script>
+<script type="module" src="js/student.js"></script>
+<script type="module" src="js/teacher.js"></script>
+</body>
+</html>

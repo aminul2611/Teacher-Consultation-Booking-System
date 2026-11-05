@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student — CampusConnect</title>
+    <link rel="stylesheet" href="css/student.css">
+</head>
+<body>
+    <main>
+        <header>
+            <div>
+                <h1>CampusConnect</h1>
+                <p>Student section</p>
+            </div>
+
+            <div>
+                <div id="profile-avatar" aria-hidden="true">S</div>
+                <span id="student-name">Student</span>
+                <button id="logout-button" type="button">Log out</button>
+            </div>
+        </header>
+
+        <section aria-labelledby="slots-heading">
+            <h2 id="slots-heading">Available teacher slots</h2>
+            <p>Choose a free time to book a consultation.</p>
+
+            <p id="slots-status" role="status" aria-live="polite">
+                Loading available slots...
+            </p>
+
+            <div id="available-slots">
+                <!-- Available slots will appear here. -->
+            </div>
+        </section>
+
+        <section aria-labelledby="request-heading">
+            <h2 id="request-heading">Request another time</h2>
+            <p>Send a preferred time to a Teacher. It will remain pending until they respond.</p>
+
+            <form id="request-form">
+                <label for="teacher-select">Teacher</label>
+                <select id="teacher-select" name="teacher_id" required>
+                    <option value="">Choose a teacher</option>
+                </select>
+
+                <label for="request-date">Preferred date</label>
+                <input
+                    id="request-date"
+                    name="date"
+                    type="date"
+                    required
+                >
+
+                <label for="request-time">Preferred time</label>
+                <input
+                    id="request-time"
+                    name="time"
+                    type="time"
+                    required
+                >
+
+                <label for="request-message">Message (optional)</label>
+                <textarea
+                    id="request-message"
+                    name="message"
+                    rows="3"
+                    maxlength="500"
+                ></textarea>
+
+                <button type="submit">Send request</button>
+            </form>
+
+            <p id="request-status" role="status" aria-live="polite"></p>
+        </section>
+
+        <section aria-labelledby="appointments-heading">
+            <h2 id="appointments-heading">My appointments and requests</h2>
+
+            <p id="appointments-status" role="status" aria-live="polite">
+                Your appointments will appear here.
+            </p>
+
+            <div id="appointments-list">
+                <!-- Appointments and request responses will appear here. -->
+            </div>
+        </section>
+    </main>
+
+    <script type="module" src="js/student.js"></script>
+</body>
+</html>
