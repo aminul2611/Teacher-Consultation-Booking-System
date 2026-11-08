@@ -1,10 +1,161 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#f5f8ff">
+    <title>Student Sign In | CampusConnect</title>
+    <link rel="stylesheet" href="css/student-login.css">
 </head>
 <body>
-$END$
+    <main class="auth-layout">
+        <section class="visual-panel">
+            <a class="brand" href="index.html">
+                <span class="brand-mark" aria-hidden="true">CC</span>
+                <span>CampusConnect</span>
+            </a>
+
+            <div class="visual-content">
+                <div class="student-art" aria-hidden="true">
+                    <svg viewBox="0 0 360 270">
+                        <circle cx="180" cy="132" r="112" class="art-halo"></circle>
+                        <rect x="174" y="65" width="116" height="102" rx="12" class="art-card"></rect>
+                        <path d="M194 91h74M194 109h58M194 127h67" class="art-lines"></path>
+                        <circle cx="209" cy="151" r="7" class="art-dot"></circle>
+                        <circle cx="135" cy="94" r="18" class="art-skin"></circle>
+                        <path d="M117 93c2-23 35-24 38-2l-8 5-7-10-17 10Z" class="art-hair"></path>
+                        <path d="m117 116 35-3 17 62-45 9-20-43Z" class="art-shirt"></path>
+                        <path d="m119 126-28 37 10 8 34-31M151 124l28 22-7 10-33-18" class="art-arm"></path>
+                        <path d="m128 179-9 51h14l17-48M154 176l10 54h14l-4-59" class="art-leg"></path>
+                        <path d="M117 228h20l-2 9h-25ZM163 228h18l8 9h-24Z" class="art-shoe"></path>
+                        <path d="M66 235h230" class="art-ground"></path>
+                        <path d="M74 75v20M64 85h20M293 186v16M285 194h16" class="art-spark"></path>
+                        <circle cx="91" cy="198" r="5" class="art-dot"></circle>
+                    </svg>
+                </div>
+
+                <p class="eyebrow">STUDENT WORKSPACE</p>
+                <h1>Make time for a better conversation.</h1>
+                <p>
+                    Book a consultation with your teacher and keep your
+                    requests in one place.
+                </p>
+            </div>
+
+            <a class="back-link" href="index.html">← Choose another workspace</a>
+        </section>
+
+        <section class="form-panel">
+            <div class="form-heading">
+                <span class="role-badge">STUDENT</span>
+                <h2 id="form-title">Welcome back</h2>
+                <p id="form-description">Sign in to your student account.</p>
+            </div>
+
+            <div class="form-tabs">
+                <button id="login-tab" class="form-tab active" type="button">
+                    Sign in
+                </button>
+                <button id="register-tab" class="form-tab" type="button">
+                    Create account
+                </button>
+            </div>
+
+            <form id="login-form" class="auth-form">
+                <label for="login-email">Email address</label>
+                <input
+                    id="login-email"
+                    name="email"
+                    type="email"
+                    autocomplete="email"
+                    placeholder="you@example.com"
+                    required
+                >
+
+                <label for="login-password">Password</label>
+                <input
+                    id="login-password"
+                    name="password"
+                    type="password"
+                    autocomplete="current-password"
+                    placeholder="Enter your password"
+                    required
+                >
+
+                <button class="primary-button" type="submit">Sign in</button>
+            </form>
+
+            <form id="register-form" class="auth-form" hidden>
+                <div class="photo-picker">
+                    <div id="photo-preview" class="photo-preview" aria-hidden="true">S</div>
+                    <div class="photo-picker-copy">
+                        <label for="profile-photo">Profile picture (optional)</label>
+                        <input
+                            id="profile-photo"
+                            name="profile_photo"
+                            type="file"
+                            accept="image/png,image/jpeg,image/webp"
+                        >
+                        <small>JPG, PNG or WebP</small>
+                    </div>
+                </div>
+
+                <label for="register-name">Full name</label>
+                <input
+                    id="register-name"
+                    name="full_name"
+                    type="text"
+                    autocomplete="name"
+                    placeholder="Your full name"
+                    required
+                >
+
+                <label for="register-email">Email address</label>
+                <input
+                    id="register-email"
+                    name="email"
+                    type="email"
+                    autocomplete="email"
+                    placeholder="you@example.com"
+                    required
+                >
+
+                <label for="register-password">Password</label>
+                <input
+                    id="register-password"
+                    name="password"
+                    type="password"
+                    autocomplete="new-password"
+                    minlength="8"
+                    placeholder="At least 8 characters"
+                    required
+                >
+
+                <label for="student-id">Student ID</label>
+                <input
+                    id="student-id"
+                    name="student_id"
+                    type="text"
+                    placeholder="Your student ID"
+                >
+
+                <label for="student-department">Department</label>
+                <input
+                    id="student-department"
+                    name="department"
+                    type="text"
+                    placeholder="Your department"
+                >
+
+                <button class="primary-button" type="submit">
+                    Create student account
+                </button>
+            </form>
+
+            <p id="auth-status" class="status-message" role="status" aria-live="polite"></p>
+        </section>
+    </main>
+
+    <script type="module" src="js/student-login.js"></script>
 </body>
 </html>

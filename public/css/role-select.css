@@ -1,0 +1,365 @@
+:root {
+    font-family: Inter, "Segoe UI", Arial, sans-serif;
+    color: #1c2c45;
+    background: #f5f7fc;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    --navy: #17324f;
+    --blue: #2878d0;
+    --purple: #6654c7;
+    --muted: #728198;
+    --border: #e0e6ef;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    min-width: 320px;
+    min-height: 100vh;
+    margin: 0;
+    background:
+        radial-gradient(ellipse at 15% 5%, #eaf1ff 0, transparent 34%),
+        radial-gradient(ellipse at 90% 88%, #f0edff 0, transparent 32%),
+        #f5f7fc;
+}
+
+.page-shell {
+    width: min(1120px, calc(100% - 48px));
+    min-height: 100vh;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.site-header {
+    display: flex;
+    min-height: 82px;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid rgb(210 220 234 / 75%);
+}
+
+.brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 11px;
+    color: var(--navy);
+    text-decoration: none;
+}
+
+.brand-mark {
+    display: grid;
+    width: 42px;
+    height: 42px;
+    place-items: center;
+}
+
+.brand-mark svg {
+    width: 100%;
+    height: 100%;
+    fill: var(--blue);
+}
+
+.brand-mark .brand-check {
+    fill: none;
+    stroke: #ffffff;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 3;
+}
+
+.brand-name {
+    font-size: 17px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+}
+
+.header-label,
+.eyebrow {
+    color: #73839a;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.15em;
+}
+
+.welcome {
+    padding: 62px 0 34px;
+    text-align: center;
+}
+
+.welcome .eyebrow {
+    margin: 0 0 12px;
+    color: var(--blue);
+}
+
+.welcome h1 {
+    margin: 0 0 12px;
+    color: var(--navy);
+    font-size: clamp(32px, 5vw, 46px);
+    letter-spacing: -0.045em;
+}
+
+.welcome > p:last-child {
+    margin: 0;
+    color: var(--muted);
+    font-size: 15px;
+    line-height: 1.6;
+}
+
+.role-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px;
+    width: min(100%, 900px);
+    margin: 0 auto;
+}
+
+.role-card {
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    background: #ffffff;
+    color: inherit;
+    text-decoration: none;
+    box-shadow: 0 14px 36px rgb(29 51 82 / 7%);
+    transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.role-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 20px 46px rgb(29 51 82 / 12%);
+}
+
+.role-card:focus-visible {
+    outline: 4px solid #a9c9f3;
+    outline-offset: 4px;
+}
+
+.illustration {
+    display: grid;
+    min-height: 238px;
+    place-items: center;
+    padding: 20px 28px 0;
+}
+
+.student-illustration {
+    background: linear-gradient(135deg, #eff6ff, #e7f0ff);
+}
+
+.teacher-illustration {
+    background: linear-gradient(135deg, #f1efff, #e9e8ff);
+}
+
+.illustration svg {
+    width: min(100%, 320px);
+    height: auto;
+}
+
+.illustration-halo {
+    fill: #d5e5ff;
+}
+
+.teacher-illustration .illustration-halo {
+    fill: #ddd9ff;
+}
+
+.book-page {
+    fill: #ffffff;
+    stroke: #83a9e7;
+    stroke-width: 3;
+}
+
+.book-page-left {
+    fill: #f8fbff;
+}
+
+.book-line,
+.board-line {
+    fill: none;
+    stroke: #b2c3dc;
+    stroke-linecap: round;
+    stroke-width: 3;
+}
+
+.person-shadow {
+    fill: none;
+    stroke: #435978;
+    stroke-linecap: round;
+    stroke-width: 3;
+}
+
+.person-skin {
+    fill: #f3bd91;
+}
+
+.person-hair {
+    fill: #29385a;
+}
+
+.person-shirt {
+    fill: #3977d1;
+}
+
+.teacher-shirt {
+    fill: #f07945;
+}
+
+.person-arm {
+    fill: none;
+    stroke: #f3bd91;
+    stroke-linecap: round;
+    stroke-width: 8;
+}
+
+.person-leg {
+    fill: none;
+    stroke: #29385a;
+    stroke-linecap: round;
+    stroke-width: 9;
+}
+
+.person-shoe {
+    fill: #29385a;
+}
+
+.accent-star,
+.accent-line {
+    fill: none;
+    stroke: #45b8c4;
+    stroke-linecap: round;
+    stroke-width: 3;
+}
+
+.teacher-illustration .accent-star {
+    stroke: #8174dc;
+}
+
+.accent-dot {
+    fill: #45b8c4;
+}
+
+.teacher-illustration .accent-dot {
+    fill: #8174dc;
+}
+
+.board {
+    fill: #ffffff;
+    stroke: #9c93e7;
+    stroke-width: 3;
+}
+
+.board-dot {
+    fill: #8d80df;
+}
+
+.pointer {
+    fill: none;
+    stroke: #f3bd91;
+    stroke-linecap: round;
+    stroke-width: 4;
+}
+
+.role-card-copy {
+    padding: 22px 25px 25px;
+}
+
+.role-number {
+    color: var(--blue);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.13em;
+}
+
+.teacher-card .role-number {
+    color: var(--purple);
+}
+
+.role-card h2 {
+    margin: 8px 0;
+    color: var(--navy);
+    font-size: 22px;
+    letter-spacing: -0.03em;
+}
+
+.role-card-copy > p {
+    min-height: 42px;
+    margin: 0;
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.55;
+}
+
+.role-action {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid #edf0f5;
+    color: var(--blue);
+    font-size: 13px;
+    font-weight: 750;
+}
+
+.teacher-card .role-action {
+    color: var(--purple);
+}
+
+.role-action span {
+    font-size: 20px;
+    transition: transform 180ms ease;
+}
+
+.role-card:hover .role-action span {
+    transform: translateX(4px);
+}
+
+.site-footer {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: auto;
+    padding: 28px 0 22px;
+    color: #8996a8;
+    font-size: 12px;
+}
+
+@media (max-width: 680px) {
+    .page-shell {
+        width: min(100% - 28px, 500px);
+    }
+
+    .welcome {
+        padding: 42px 0 26px;
+    }
+
+    .role-grid {
+        grid-template-columns: 1fr;
+        gap: 17px;
+    }
+
+    .illustration {
+        min-height: 215px;
+    }
+
+    .role-card-copy > p {
+        min-height: auto;
+    }
+
+    .site-footer {
+        flex-direction: column;
+        gap: 6px;
+        text-align: center;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+    }
+}

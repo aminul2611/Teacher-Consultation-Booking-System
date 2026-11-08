@@ -30,6 +30,9 @@ PUBLIC_DIR = PROJECT_DIR / "public"
 HOST = "0.0.0.0"
 PORT = int(os.environ.get("PORT", "8000"))
 
+# Allows a profile image up to 2 MB after base64 encoding and JSON overhead.
+MAX_REQUEST_BYTES = 3_000_000
+
 ALLOWED_ORIGINS = {
     origin.strip()
     for origin in os.environ.get(
@@ -54,6 +57,7 @@ def run_rpc_method(method, params):
             student_id=params.get("student_id", ""),
             department=params.get("department", ""),
             teacher_code=params.get("teacher_code", ""),
+            photo_data=params.get("photo_data", ""),
         )
 
     if method in ("login", "login_user"):
@@ -137,11 +141,11 @@ class CampusConnectHandler(SimpleHTTPRequestHandler):
             self.send_header("Vary", "Origin")
             self.send_header(
                 "Access-Control-Allow-Headers",
-                "Content-Type"
+                "Content-Type",
             )
             self.send_header(
                 "Access-Control-Allow-Methods",
-                "GET, POST, OPTIONS"
+                "GET, POST, OPTIONS",
             )
 
     def do_OPTIONS(self):
@@ -164,19 +168,31 @@ class CampusConnectHandler(SimpleHTTPRequestHandler):
         request_id = None
 
         try:
-            content_length = int(self.headers.get("Content-Length", "0"))
+            content_length = int(
+                self.headers.get("Content-Length", "0")
+            )
 
-            if content_length <= 0 or content_length > 1_000_000:
-                raise ValueError("Request size is missing or too large.")
+            if content_length <= 0:
+                raise ValueError("The request body is missing.")
+
+            if content_length > MAX_REQUEST_BYTES:
+                raise ValueError(
+                    "The request is too large. Profile pictures must be "
+                    "2 MB or smaller."
+                )
 
             raw_body = self.rfile.read(content_length)
             request = json.loads(raw_body.decode("utf-8"))
 
             if not isinstance(request, dict):
-                raise ValueError("The RPC request must be a JSON object.")
+                raise ValueError(
+                    "The RPC request must be a JSON object."
+                )
 
             if request.get("jsonrpc") != "2.0":
-                raise ValueError("The request must use JSON-RPC 2.0.")
+                raise ValueError(
+                    "The request must use JSON-RPC 2.0."
+                )
 
             request_id = request.get("id")
             method = request.get("method")
@@ -237,7 +253,10 @@ class CampusConnectHandler(SimpleHTTPRequestHandler):
         response_body = json.dumps(data).encode("utf-8")
 
         self.send_response(status)
-        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header(
+            "Content-Type",
+            "application/json; charset=utf-8",
+        )
         self.send_header("Content-Length", str(len(response_body)))
         self._add_cors_headers()
         self.end_headers()

@@ -3,89 +3,138 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Student — CampusConnect</title>
+    <meta name="theme-color" content="#f4f7fb">
+    <title>Student | CampusConnect</title>
     <link rel="stylesheet" href="css/student.css">
 </head>
 <body>
-    <main>
-        <header>
-            <div>
-                <h1>CampusConnect</h1>
-                <p>Student section</p>
-            </div>
+    <div class="page-shell">
+        <header class="topbar">
+            <a class="brand" href="student.html">
+                <span class="brand-mark">CC</span>
+                <span>CampusConnect</span>
+            </a>
 
-            <div>
-                <div id="profile-avatar" aria-hidden="true">S</div>
-                <span id="student-name">Student</span>
-                <button id="logout-button" type="button">Log out</button>
+            <div class="profile-area">
+                <div id="profile-avatar" class="avatar" aria-hidden="true">S</div>
+                <span id="student-name" class="profile-name">Student</span>
+                <button id="logout-button" class="button button-outline" type="button">
+                    Log out
+                </button>
             </div>
         </header>
 
-        <section aria-labelledby="slots-heading">
-            <h2 id="slots-heading">Available teacher slots</h2>
-            <p>Choose a free time to book a consultation.</p>
+        <main>
+            <section class="welcome-section">
+                <p class="eyebrow">STUDENT WORKSPACE</p>
+                <h1>Your consultations</h1>
+                <p>Find a time with a teacher or request another time.</p>
+            </section>
 
-            <p id="slots-status" role="status" aria-live="polite">
-                Loading available slots...
-            </p>
+            <section class="content-section" aria-labelledby="slots-heading">
+                <div class="section-heading">
+                    <div>
+                        <p class="eyebrow">BOOK A TIME</p>
+                        <h2 id="slots-heading">Available slots</h2>
+                    </div>
 
-            <div id="available-slots">
-                <!-- Available slots will appear here. -->
-            </div>
-        </section>
+                    <button id="refresh-slots-button" class="button button-outline" type="button">
+                        Refresh
+                    </button>
+                </div>
 
-        <section aria-labelledby="request-heading">
-            <h2 id="request-heading">Request another time</h2>
-            <p>Send a preferred time to a Teacher. It will remain pending until they respond.</p>
+                <p id="slots-status" class="status-message" role="status" aria-live="polite">
+                    Loading available slots...
+                </p>
 
-            <form id="request-form">
-                <label for="teacher-select">Teacher</label>
-                <select id="teacher-select" name="teacher_id" required>
-                    <option value="">Choose a teacher</option>
-                </select>
+                <div id="available-slots" class="card-grid"></div>
+            </section>
 
-                <label for="request-date">Preferred date</label>
-                <input
-                    id="request-date"
-                    name="date"
-                    type="date"
-                    required
-                >
+            <section class="content-section" aria-labelledby="request-heading">
+                <div class="section-heading">
+                    <div>
+                        <p class="eyebrow">NEED ANOTHER TIME?</p>
+                        <h2 id="request-heading">Request a consultation</h2>
+                    </div>
+                </div>
 
-                <label for="request-time">Preferred time</label>
-                <input
-                    id="request-time"
-                    name="time"
-                    type="time"
-                    required
-                >
+                <p class="section-description">
+                    Choose a teacher and send your preferred date and time.
+                </p>
 
-                <label for="request-message">Message (optional)</label>
-                <textarea
-                    id="request-message"
-                    name="message"
-                    rows="3"
-                    maxlength="500"
-                ></textarea>
+                <form id="request-form" class="request-form">
+                    <div class="form-field">
+                        <label for="teacher-select">Teacher</label>
+                        <select id="teacher-select" name="teacher_id" required>
+                            <option value="">Choose a teacher</option>
+                        </select>
+                    </div>
 
-                <button type="submit">Send request</button>
-            </form>
+                    <div class="form-field">
+                        <label for="request-date">Preferred date</label>
+                        <input
+                            id="request-date"
+                            name="date"
+                            type="date"
+                            required
+                        >
+                    </div>
 
-            <p id="request-status" role="status" aria-live="polite"></p>
-        </section>
+                    <div class="form-field">
+                        <label for="request-time">Preferred time</label>
+                        <input
+                            id="request-time"
+                            name="time"
+                            type="time"
+                            required
+                        >
+                    </div>
 
-        <section aria-labelledby="appointments-heading">
-            <h2 id="appointments-heading">My appointments and requests</h2>
+                    <div class="form-field form-field-wide">
+                        <label for="request-message">Message (optional)</label>
+                        <textarea
+                            id="request-message"
+                            name="message"
+                            rows="3"
+                            maxlength="500"
+                            placeholder="Briefly describe what you would like to discuss."
+                        ></textarea>
+                    </div>
 
-            <p id="appointments-status" role="status" aria-live="polite">
-                Your appointments will appear here.
-            </p>
+                    <div class="form-field-wide">
+                        <button class="button button-primary" type="submit">
+                            Send request
+                        </button>
+                    </div>
+                </form>
 
-            <div id="appointments-list">
-                <!-- Appointments and request responses will appear here. -->
-            </div>
-        </section>
-    </main>
+                <p id="request-status" class="status-message" role="status" aria-live="polite"></p>
+            </section>
+
+            <section class="content-section" aria-labelledby="appointments-heading">
+                <div class="section-heading">
+                    <div>
+                        <p class="eyebrow">YOUR ACTIVITY</p>
+                        <h2 id="appointments-heading">Appointments and requests</h2>
+                    </div>
+
+                    <button id="refresh-activity-button" class="button button-outline" type="button">
+                        Refresh
+                    </button>
+                </div>
+
+                <p id="appointments-status" class="status-message" role="status" aria-live="polite">
+                    Loading your activity...
+                </p>
+
+                <div id="appointments-list" class="card-grid"></div>
+            </section>
+        </main>
+
+        <footer class="footer">
+            CampusConnect · Student workspace
+        </footer>
+    </div>
 
     <script type="module" src="js/student.js"></script>
 </body>

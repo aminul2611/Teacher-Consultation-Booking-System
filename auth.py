@@ -7,6 +7,8 @@ import time
 import uuid
 from pathlib import Path
 
+from profile_photos import delete_profile_photo, save_profile_photo
+
 
 PROJECT_DIR = Path(__file__).parent
 DATABASE = PROJECT_DIR / "campusconnect_auth.db"
@@ -57,19 +59,31 @@ def _hash_password(password, salt):
         "sha256",
         password.encode("utf-8"),
         salt,
-        PASSWORD_ITERATIONS
+        PASSWORD_ITERATIONS,
     )
 
 
-def register_user(email, password, full_name, role, student_id="", department="", teacher_code=""):
+def register_user(
+    email,
+    password,
+    full_name,
+    role,
+    student_id="",
+    department="",
+    teacher_code="",
+    photo_data="",
+):
     email = email.strip().lower()
     full_name = full_name.strip()
     role = role.strip().lower()
+    student_id = (student_id or "").strip()
+    department = (department or "").strip()
+    teacher_code = teacher_code or ""
 
     if not email or "@" not in email:
         raise ValueError("Enter a valid email address.")
 
-    if len(password) < 8:
+    if not isinstance(password, str) or len(password) < 8:
         raise ValueError("Password must be at least 8 characters.")
 
     if not full_name:
@@ -85,6 +99,9 @@ def register_user(email, password, full_name, role, student_id="", department=""
         if not hmac.compare_digest(teacher_code, TEACHER_INVITE_CODE):
             raise ValueError("Invalid teacher invitation code.")
 
+    # The profile photo is optional. This returns None when no photo is sent.
+    photo_path = save_profile_photo(photo_data)
+
     user_id = str(uuid.uuid4())
     salt = secrets.token_bytes(16)
     password_hash = _hash_password(password, salt)
@@ -93,32 +110,45 @@ def register_user(email, password, full_name, role, student_id="", department=""
         with connect_db() as db:
             db.execute("""
                 INSERT INTO users (
-                    id, email, full_name, role, student_id, department,
-                    photo_path, password_salt, password_hash, created_at
+                    id,
+                    email,
+                    full_name,
+                    role,
+                    student_id,
+                    department,
+                    photo_path,
+                    password_salt,
+                    password_hash,
+                    created_at
                 )
-                VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 user_id,
                 email,
                 full_name,
                 role,
-                student_id.strip(),
-                department.strip(),
+                student_id,
+                department,
+                photo_path,
                 salt.hex(),
                 password_hash.hex(),
-                int(time.time())
+                int(time.time()),
             ))
     except sqlite3.IntegrityError:
+        delete_profile_photo(photo_path)
         raise ValueError("An account with this email already exists.")
+    except Exception:
+        delete_profile_photo(photo_path)
+        raise
 
     return {
         "id": user_id,
         "email": email,
         "full_name": full_name,
         "role": role,
-        "student_id": student_id.strip(),
-        "department": department.strip(),
-        "photo_path": None
+        "student_id": student_id,
+        "department": department,
+        "photo_path": photo_path,
     }
 
 
@@ -140,7 +170,7 @@ def login_user(email, password):
 
         if not hmac.compare_digest(
             entered_hash.hex(),
-            user["password_hash"]
+            user["password_hash"],
         ):
             raise ValueError("Email or password is incorrect.")
 
@@ -149,7 +179,7 @@ def login_user(email, password):
 
         db.execute(
             "DELETE FROM sessions WHERE expires_at <= ?",
-            (int(time.time()),)
+            (int(time.time()),),
         )
 
         db.execute("""
@@ -166,8 +196,8 @@ def login_user(email, password):
             "role": user["role"],
             "student_id": user["student_id"],
             "department": user["department"],
-            "photo_path": user["photo_path"]
-        }
+            "photo_path": user["photo_path"],
+        },
     }
 
 
@@ -211,7 +241,10 @@ def logout_user(token):
         return {"message": "Logged out."}
 
     with connect_db() as db:
-        db.execute("DELETE FROM sessions WHERE token = ?", (token,))
+        db.execute(
+            "DELETE FROM sessions WHERE token = ?",
+            (token,),
+        )
 
     return {"message": "Logged out."}
 

@@ -3,53 +3,110 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CampusConnect | Teacher Panel</title>
-    <link rel="stylesheet" href="css/style.css">
+    <meta name="theme-color" content="#f4f7fb">
+    <title>Teacher | CampusConnect</title>
+    <link rel="stylesheet" href="css/teacher.css">
 </head>
 <body>
-    <header>
-        <h1>CampusConnect</h1>
-        <p>Teacher Consultation Booking System</p>
-    </header>
+    <div class="page-shell">
+        <header class="topbar">
+            <a class="brand" href="teacher.html">
+                <span class="brand-mark">CC</span>
+                <span>CampusConnect</span>
+            </a>
 
-    <main>
-        <section id="add-slot-section">
-            <h2>Add a Consultation Slot</h2>
-
-            <form id="slot-form">
-                <label for="teacher-name">Teacher Name</label>
-                <input id="teacher-name" name="teacher-name" required>
-
-                <label for="department">Department</label>
-                <input id="department" name="department" required>
-
-                <label for="slot-date">Date</label>
-                <input id="slot-date" name="slot-date" type="date" required>
-
-                <label for="start-time">Start Time</label>
-                <input id="start-time" name="start-time" type="time" required>
-
-                <label for="end-time">End Time</label>
-                <input id="end-time" name="end-time" type="time" required>
-
-                <button type="submit">Add Slot</button>
-            </form>
-
-            <p id="slot-status" role="status"></p>
-        </section>
-
-        <section id="appointments-section">
-            <h2>Appointments</h2>
-
-            <button id="load-appointments-button" type="button">
-                Load Appointments
-            </button>
-
-            <div id="appointments-list">
-                <p>Appointments will appear here.</p>
+            <div class="profile-area">
+                <div id="profile-avatar" class="avatar" aria-hidden="true">T</div>
+                <div class="profile-details">
+                    <span id="teacher-name" class="profile-name">Teacher</span>
+                    <span id="teacher-department" class="profile-department"></span>
+                </div>
+                <button id="logout-button" class="button button-outline" type="button">
+                    Log out
+                </button>
             </div>
-        </section>
-    </main>
-<script src="js/teacher.js"></script>
+        </header>
+
+        <main>
+            <section class="welcome-section">
+                <p class="eyebrow">TEACHER WORKSPACE</p>
+                <h1>Manage your consultations</h1>
+                <p>Add your available hours and respond to student requests.</p>
+            </section>
+
+            <section class="content-section" aria-labelledby="slot-heading">
+                <div class="section-heading">
+                    <div>
+                        <p class="eyebrow">SET YOUR AVAILABILITY</p>
+                        <h2 id="slot-heading">Add a consultation slot</h2>
+                    </div>
+                </div>
+
+                <p class="section-description">
+                    Students can book a slot after you add it.
+                </p>
+
+                <form id="slot-form" class="slot-form">
+                    <div class="form-field">
+                        <label for="slot-date">Date</label>
+                        <input id="slot-date" name="date" type="date" required>
+                    </div>
+
+                    <div class="form-field">
+                        <label for="slot-start-time">Start time</label>
+                        <input
+                            id="slot-start-time"
+                            name="start_time"
+                            type="time"
+                            required
+                        >
+                    </div>
+
+                    <div class="form-field">
+                        <label for="slot-end-time">End time</label>
+                        <input
+                            id="slot-end-time"
+                            name="end_time"
+                            type="time"
+                            required
+                        >
+                    </div>
+
+                    <div class="form-field form-button-field">
+                        <button class="button button-primary" type="submit">
+                            Add slot
+                        </button>
+                    </div>
+                </form>
+
+                <p id="slot-status" class="status-message" role="status" aria-live="polite"></p>
+            </section>
+
+            <section class="content-section" aria-labelledby="requests-heading">
+                <div class="section-heading">
+                    <div>
+                        <p class="eyebrow">STUDENT MESSAGES</p>
+                        <h2 id="requests-heading">Consultation requests</h2>
+                    </div>
+
+                    <button id="refresh-requests-button" class="button button-outline" type="button">
+                        Refresh
+                    </button>
+                </div>
+
+                <p id="requests-status" class="status-message" role="status" aria-live="polite">
+                    Loading consultation requests...
+                </p>
+
+                <div id="requests-list" class="card-grid"></div>
+            </section>
+        </main>
+
+        <footer class="footer">
+            CampusConnect · Teacher workspace
+        </footer>
+    </div>
+
+    <script type="module" src="js/teacher.js"></script>
 </body>
 </html>

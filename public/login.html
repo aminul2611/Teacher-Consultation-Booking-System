@@ -3,113 +3,195 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CampusConnect — Login</title>
+    <meta name="theme-color" content="#f4f7fb">
+    <title>CampusConnect | Sign in</title>
     <link rel="stylesheet" href="css/login.css">
 </head>
 <body>
-    <main>
-        <h1>CampusConnect</h1>
-        <p>Teacher Consultation Booking System</p>
+    <main class="auth-shell">
+        <section class="intro-panel">
+            <a class="brand" href="login.html" aria-label="CampusConnect home">
+                <span class="brand-mark">CC</span>
+                <span>CampusConnect</span>
+            </a>
 
-        <section aria-labelledby="role-heading">
-            <h2 id="role-heading">Choose your section</h2>
-
-            <div>
-                <button type="button" class="role-choice" data-role="student">
-                    Student
-                </button>
-
-                <button type="button" class="role-choice" data-role="teacher">
-                    Teacher
-                </button>
+            <div class="intro-copy">
+                <p class="eyebrow">CAMPUS CONSULTATION PORTAL</p>
+                <h1>Make time for a better conversation.</h1>
+                <p>
+                    Find a consultation time with your teacher, or manage
+                    your available hours in one place.
+                </p>
             </div>
+
+            <p class="intro-footer">
+                A Distributed and Parallel Computing project
+            </p>
         </section>
 
-        <section id="auth-panel" hidden>
-            <h2 id="selected-role-heading">Login</h2>
+        <section class="form-panel">
+            <div class="form-heading">
+                <p class="eyebrow">WELCOME TO CAMPUSCONNECT</p>
+                <h2>Choose your workspace</h2>
+                <p>Sign in or create an account to continue.</p>
+            </div>
 
-            <div>
-                <button type="button" id="show-login-button">
-                    Login
+            <div class="role-picker" aria-label="Choose your role">
+                <button
+                    class="role-button"
+                    type="button"
+                    data-role="student"
+                >
+                    <span class="role-icon" aria-hidden="true">S</span>
+                    <span>
+                        <strong>Student</strong>
+                        <small>Book a consultation</small>
+                    </span>
                 </button>
-                <button type="button" id="show-register-button">
-                    Create account
+
+                <button
+                    class="role-button"
+                    type="button"
+                    data-role="teacher"
+                >
+                    <span class="role-icon" aria-hidden="true">T</span>
+                    <span>
+                        <strong>Teacher</strong>
+                        <small>Manage your schedule</small>
+                    </span>
                 </button>
             </div>
 
-            <form id="login-form">
-                <label for="login-email">Email</label>
-                <input
-                    id="login-email"
-                    name="email"
-                    type="email"
-                    autocomplete="email"
-                    required
-                >
-
-                <label for="login-password">Password</label>
-                <input
-                    id="login-password"
-                    name="password"
-                    type="password"
-                    autocomplete="current-password"
-                    required
-                >
-
-                <button type="submit">Login</button>
-            </form>
-
-            <form id="register-form" hidden>
-                <label for="register-name">Full name</label>
-                <input
-                    id="register-name"
-                    name="full_name"
-                    type="text"
-                    autocomplete="name"
-                    required
-                >
-
-                <label for="register-email">Email</label>
-                <input
-                    id="register-email"
-                    name="email"
-                    type="email"
-                    autocomplete="email"
-                    required
-                >
-
-                <label for="register-password">Password</label>
-                <input
-                    id="register-password"
-                    name="password"
-                    type="password"
-                    autocomplete="new-password"
-                    minlength="8"
-                    required
-                >
-
-                <div id="student-fields" hidden>
-                    <label for="student-id">Student ID</label>
-                    <input id="student-id" name="student_id" type="text">
-
-                    <label for="department">Department</label>
-                    <input id="department" name="department" type="text">
-                </div>
-
-                <div id="teacher-fields" hidden>
-                    <label for="teacher-code">Teacher invitation code</label>
-                    <input
-                        id="teacher-code"
-                        name="teacher_code"
-                        type="password"
-                        autocomplete="off"
+            <section id="auth-panel" class="auth-panel" hidden>
+                <div class="auth-tabs">
+                    <button
+                        id="show-login-button"
+                        class="auth-tab active"
+                        type="button"
                     >
+                        Sign in
+                    </button>
+
+                    <button
+                        id="show-register-button"
+                        class="auth-tab"
+                        type="button"
+                    >
+                        Create account
+                    </button>
                 </div>
 
-                <button type="submit">Create account</button>
-            </form>
+                <h3 id="selected-role-heading">Student sign in</h3>
 
-            <p id="auth-status" role="status" aria-live="polite"></p>
+                <form id="login-form">
+                    <label for="login-email">Email address</label>
+                    <input
+                        id="login-email"
+                        name="email"
+                        type="email"
+                        autocomplete="email"
+                        placeholder="you@example.com"
+                        required
+                    >
+
+                    <label for="login-password">Password</label>
+                    <input
+                        id="login-password"
+                        name="password"
+                        type="password"
+                        autocomplete="current-password"
+                        placeholder="Enter your password"
+                        required
+                    >
+
+                    <button class="primary-button" type="submit">
+                        Sign in
+                    </button>
+                </form>
+
+                <form id="register-form" hidden>
+                    <label for="register-name">Full name</label>
+                    <input
+                        id="register-name"
+                        name="full_name"
+                        type="text"
+                        autocomplete="name"
+                        placeholder="Your name"
+                        required
+                    >
+
+                    <label for="register-email">Email address</label>
+                    <input
+                        id="register-email"
+                        name="email"
+                        type="email"
+                        autocomplete="email"
+                        placeholder="you@example.com"
+                        required
+                    >
+
+                    <label for="register-password">Password</label>
+                    <input
+                        id="register-password"
+                        name="password"
+                        type="password"
+                        autocomplete="new-password"
+                        minlength="8"
+                        placeholder="At least 8 characters"
+                        required
+                    >
+
+                    <div id="student-fields" class="extra-fields" hidden>
+                        <label for="student-id">Student ID</label>
+                        <input
+                            id="student-id"
+                            name="student_id"
+                            type="text"
+                            placeholder="Your student ID"
+                        >
+
+                        <label for="student-department">Department</label>
+                        <input
+                            id="student-department"
+                            name="student_department"
+                            type="text"
+                            placeholder="Your department"
+                        >
+                    </div>
+
+                    <div id="teacher-fields" class="extra-fields" hidden>
+                        <label for="teacher-code">
+                            Teacher invitation code
+                        </label>
+                        <input
+                            id="teacher-code"
+                            name="teacher_code"
+                            type="password"
+                            autocomplete="off"
+                            placeholder="Enter the invitation code"
+                        >
+
+                        <label for="teacher-department">Department</label>
+                        <input
+                            id="teacher-department"
+                            name="teacher_department"
+                            type="text"
+                            placeholder="Your department"
+                        >
+                    </div>
+
+                    <button class="primary-button" type="submit">
+                        Create account
+                    </button>
+                </form>
+
+                <p
+                    id="auth-status"
+                    class="status-message"
+                    role="status"
+                    aria-live="polite"
+                ></p>
+            </section>
         </section>
     </main>
 

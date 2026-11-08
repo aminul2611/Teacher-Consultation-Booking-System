@@ -1,10 +1,163 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#f8f6ff">
+    <title>Teacher Sign In | CampusConnect</title>
+    <link rel="stylesheet" href="css/teacher-login.css">
 </head>
 <body>
-$END$
+    <main class="auth-layout">
+        <section class="visual-panel">
+            <a class="brand" href="index.html">
+                <span class="brand-mark" aria-hidden="true">CC</span>
+                <span>CampusConnect</span>
+            </a>
+
+            <div class="visual-content">
+                <div class="teacher-art" aria-hidden="true">
+                    <svg viewBox="0 0 360 270">
+                        <circle cx="180" cy="132" r="112" class="art-halo"></circle>
+                        <rect x="153" y="55" width="143" height="111" rx="12" class="art-board"></rect>
+                        <path d="M174 84h100M174 105h75M174 126h89" class="art-lines"></path>
+                        <circle cx="253" cy="147" r="7" class="art-dot"></circle>
+                        <circle cx="111" cy="96" r="18" class="art-skin"></circle>
+                        <path d="M93 95c2-23 35-24 38-2l-8 5-7-10-17 10Z" class="art-hair"></path>
+                        <path d="m93 118 35-3 16 61-45 9-20-43Z" class="art-shirt"></path>
+                        <path d="m95 128-25 36 10 8 32-31M127 126l27-16 6 9-29 23" class="art-arm"></path>
+                        <path d="m104 179-9 51h14l17-48M130 176l10 54h14l-4-59" class="art-leg"></path>
+                        <path d="M93 228h20l-2 9H90ZM139 228h18l8 9h-24Z" class="art-shoe"></path>
+                        <path d="M65 237h235" class="art-ground"></path>
+                        <path d="M76 69v20M66 79h20M293 184v16M285 192h16" class="art-spark"></path>
+                    </svg>
+                </div>
+
+                <p class="eyebrow">TEACHER WORKSPACE</p>
+                <h1>Your time can make a difference.</h1>
+                <p>
+                    Share your available hours and manage student
+                    consultation requests in one place.
+                </p>
+            </div>
+
+            <a class="back-link" href="index.html">← Choose another workspace</a>
+        </section>
+
+        <section class="form-panel">
+            <div class="form-heading">
+                <span class="role-badge">TEACHER</span>
+                <h2 id="form-title">Welcome back</h2>
+                <p id="form-description">Sign in to your teacher account.</p>
+            </div>
+
+            <div class="form-tabs">
+                <button id="login-tab" class="form-tab active" type="button">
+                    Sign in
+                </button>
+                <button id="register-tab" class="form-tab" type="button">
+                    Create account
+                </button>
+            </div>
+
+            <form id="login-form" class="auth-form">
+                <label for="login-email">Email address</label>
+                <input
+                    id="login-email"
+                    name="email"
+                    type="email"
+                    autocomplete="email"
+                    placeholder="you@example.com"
+                    required
+                >
+
+                <label for="login-password">Password</label>
+                <input
+                    id="login-password"
+                    name="password"
+                    type="password"
+                    autocomplete="current-password"
+                    placeholder="Enter your password"
+                    required
+                >
+
+                <button class="primary-button" type="submit">Sign in</button>
+            </form>
+
+            <form id="register-form" class="auth-form" hidden>
+                <div class="photo-picker">
+                    <div id="photo-preview" class="photo-preview" aria-hidden="true">T</div>
+                    <div class="photo-picker-copy">
+                        <label for="profile-photo">Profile picture (optional)</label>
+                        <input
+                            id="profile-photo"
+                            name="profile_photo"
+                            type="file"
+                            accept="image/png,image/jpeg,image/webp"
+                        >
+                        <small>JPG, PNG or WebP</small>
+                    </div>
+                </div>
+
+                <label for="register-name">Full name</label>
+                <input
+                    id="register-name"
+                    name="full_name"
+                    type="text"
+                    autocomplete="name"
+                    placeholder="Your full name"
+                    required
+                >
+
+                <label for="register-email">Email address</label>
+                <input
+                    id="register-email"
+                    name="email"
+                    type="email"
+                    autocomplete="email"
+                    placeholder="you@example.com"
+                    required
+                >
+
+                <label for="register-password">Password</label>
+                <input
+                    id="register-password"
+                    name="password"
+                    type="password"
+                    autocomplete="new-password"
+                    minlength="8"
+                    placeholder="At least 8 characters"
+                    required
+                >
+
+                <label for="teacher-department">Department</label>
+                <input
+                    id="teacher-department"
+                    name="department"
+                    type="text"
+                    placeholder="Your department"
+                    required
+                >
+
+                <label for="teacher-code">Teacher invitation code</label>
+                <input
+                    id="teacher-code"
+                    name="teacher_code"
+                    type="password"
+                    autocomplete="off"
+                    placeholder="Enter the invitation code"
+                    required
+                >
+
+                <button class="primary-button" type="submit">
+                    Create teacher account
+                </button>
+            </form>
+
+            <p id="auth-status" class="status-message" role="status" aria-live="polite"></p>
+        </section>
+    </main>
+
+    <script type="module" src="js/teacher-login.js"></script>
 </body>
 </html>
