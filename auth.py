@@ -42,7 +42,6 @@ def setup_auth_database():
             )
         """)
 
-        # Existing users are kept approved when this column is added.
         columns = {
             row["name"]
             for row in db.execute(
@@ -55,6 +54,14 @@ def setup_auth_database():
                 ALTER TABLE users
                 ADD COLUMN approval_status TEXT NOT NULL DEFAULT 'approved'
             """)
+
+        # আগের pending teacher account-গুলোও active করা হবে।
+        db.execute("""
+            UPDATE users
+            SET approval_status = 'approved'
+            WHERE role = 'teacher'
+              AND approval_status = 'pending'
+        """)
 
         db.execute("""
             CREATE TABLE IF NOT EXISTS sessions (
@@ -91,8 +98,7 @@ def register_user(
     student_id = (student_id or "").strip()
     department = (department or "").strip()
 
-    # Keep teacher_code in the function signature for server compatibility.
-    # Teacher registration now uses approval instead of an invitation code.
+    # server.py compatibility-এর জন্য teacher_code parameter রাখা হয়েছে।
     _ = teacher_code
 
     if not email or "@" not in email:
@@ -107,7 +113,8 @@ def register_user(
     if role not in ("student", "teacher"):
         raise ValueError("Role must be student or teacher.")
 
-    approval_status = "pending" if role == "teacher" else "approved"
+    # Student এবং teacher—দুই ধরনের account-ই সঙ্গে সঙ্গে active হবে।
+    approval_status = "approved"
 
     photo_path = save_profile_photo(photo_data)
 
@@ -152,12 +159,6 @@ def register_user(
         delete_profile_photo(photo_path)
         raise
 
-    message = (
-        "Teacher account submitted for approval."
-        if role == "teacher"
-        else "Student account created successfully."
-    )
-
     return {
         "id": user_id,
         "email": email,
@@ -167,7 +168,7 @@ def register_user(
         "student_id": student_id,
         "department": department,
         "photo_path": photo_path,
-        "message": message,
+        "message": "Account created successfully. Please sign in.",
     }
 
 
@@ -196,14 +197,6 @@ def login_user(email, password):
         ):
             raise ValueError("Email or password is incorrect.")
 
-        if (
-            user["role"] == "teacher"
-            and user["approval_status"] != "approved"
-        ):
-            raise ValueError(
-                "Your teacher account is awaiting approval."
-            )
-
         token = secrets.token_urlsafe(32)
         expires_at = int(time.time()) + SESSION_LIFETIME_SECONDS
 
@@ -224,7 +217,7 @@ def login_user(email, password):
             "email": user["email"],
             "full_name": user["full_name"],
             "role": user["role"],
-            "approval_status": user["approval_status"],
+            "approval_status": "approved",
             "student_id": user["student_id"],
             "department": user["department"],
             "photo_path": user["photo_path"],
@@ -256,13 +249,9 @@ def get_user_from_token(token):
     if user is None:
         raise ValueError("Your session has expired. Please log in again.")
 
-    if (
-        user["role"] == "teacher"
-        and user["approval_status"] != "approved"
-    ):
-        raise ValueError("Your teacher account is awaiting approval.")
-
-    return dict(user)
+    user_data = dict(user)
+    user_data["approval_status"] = "approved"
+    return user_data
 
 
 def require_role(token, required_role):
@@ -285,42 +274,6 @@ def logout_user(token):
         )
 
     return {"message": "Logged out."}
-
-
-def list_pending_teacher_accounts():
-    with connect_db() as db:
-        rows = db.execute("""
-            SELECT email, full_name, student_id, department, created_at
-            FROM users
-            WHERE role = 'teacher'
-              AND approval_status = 'pending'
-            ORDER BY created_at
-        """).fetchall()
-
-    return [dict(row) for row in rows]
-
-
-def approve_teacher_account(email):
-    email = (email or "").strip().lower()
-
-    if not email:
-        raise ValueError("Enter the teacher's email address.")
-
-    with connect_db() as db:
-        result = db.execute("""
-            UPDATE users
-            SET approval_status = 'approved'
-            WHERE email = ?
-              AND role = 'teacher'
-              AND approval_status = 'pending'
-        """, (email,))
-
-        if result.rowcount != 1:
-            raise ValueError(
-                "No pending teacher account was found for that email."
-            )
-
-    return {"message": f"Teacher account approved: {email}"}
 
 
 if __name__ == "__main__":

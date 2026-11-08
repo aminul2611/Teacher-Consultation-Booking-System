@@ -274,8 +274,7 @@ registerForm.addEventListener("submit", async (event) => {
 
         showLoginForm(false);
         showMessage(
-            "Account submitted for approval. You can sign in after approval.",
-            "success"
+            "Account created successfully. Please sign in."
         );
     } catch (error) {
         showMessage(
