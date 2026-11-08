@@ -539,7 +539,15 @@ a:focus-visible {
     background: #fff0f0;
     color: var(--danger);
 }
+.status-proposed {
+    background: #eaf2ff;
+    color: var(--blue-dark);
+}
 
+.status-declined {
+    background: #fff0f0;
+    color: var(--danger);
+}
 /* Page messages */
 
 .dashboard-message {

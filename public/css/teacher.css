@@ -210,15 +210,6 @@ a:focus-visible {
     flex: 1;
 }
 
-.teacher-page-intro {
-    min-height: 170px;
-    margin-bottom: 26px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 24px;
-}
-
 .teacher-intro-copy h1 {
     margin: 0;
     color: var(--navy);
@@ -666,7 +657,7 @@ a:focus-visible {
 }
 
 .teacher-form {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 @media (max-width: 760px) {

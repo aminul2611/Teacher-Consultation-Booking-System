@@ -176,18 +176,18 @@ async function loadTeacherSlots() {
 
         slots.forEach((slot) => {
             const card = document.createElement("article");
-            card.className = "teacher-slot-item";
+            card.className = "teacher-slot-card";
 
             card.append(
                 makeElement(
                     "h3",
                     `${formatDateTime(slot.starts_at)} – ${formatDateTime(slot.ends_at)}`,
-                    "teacher-slot-time"
+                    "teacher-slot-title"
                 ),
                 makeElement(
                     "p",
                     `Status: ${slot.status === "booked" ? "Booked" : "Available"}`,
-                    "teacher-slot-status"
+                    "teacher-slot-meta"
                 )
             );
 
