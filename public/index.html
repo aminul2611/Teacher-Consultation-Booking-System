@@ -3,66 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#f5f7fc">
-    <title>CampusConnect | Choose your workspace</title>
+    <meta name="theme-color" content="#f5f7fb">
+    <title>Campus Connect | SWUST</title>
     <link rel="stylesheet" href="css/role-select.css">
 </head>
 <body>
     <div class="page-shell">
         <header class="site-header">
-            <a class="brand" href="index.html" aria-label="CampusConnect home">
-                <span class="brand-mark" aria-hidden="true">
-                    <svg viewBox="0 0 40 40" role="presentation">
-                        <path d="M20 4 34 10v10c0 8-5.7 13-14 16C11.7 33 6 28 6 20V10l14-6Z"></path>
-                        <path class="brand-check" d="m13 20 5 5 10-11"></path>
-                    </svg>
-                </span>
-                <span class="brand-name">CampusConnect</span>
-            </a>
+            <a
+                class="brand"
+                href="index.html"
+                aria-label="Campus Connect SWUST home"
+            >
+                <img
+                    class="brand-logo"
+                    src="images/campus-logo.png"
+                    alt="Campus Connect SWUST logo"
+                >
 
-            <span class="header-label">CONSULTATION PORTAL</span>
+                <span class="brand-copy">
+                    <strong>Campus Connect</strong>
+                    <small>SWUST</small>
+                </span>
+            </a>
         </header>
 
         <main>
             <section class="welcome">
-                <p class="eyebrow">WELCOME TO CAMPUSCONNECT</p>
+                <p class="eyebrow">WELCOME TO CONSULTATION PORTAL</p>
                 <h1>Choose your workspace</h1>
-                <p>
-                    Select the option that matches you to continue.
-                </p>
+                <p>Select your portal to continue.</p>
             </section>
 
-            <section class="role-grid" aria-label="Select your role">
+            <section class="role-grid" aria-label="Choose a portal">
                 <a
                     class="role-card student-card"
                     href="student-login.html"
                     data-role="student"
                 >
-                    <div class="illustration student-illustration" aria-hidden="true">
-                        <svg viewBox="0 0 320 220">
-                            <circle class="illustration-halo" cx="160" cy="108" r="88"></circle>
-                            <path class="book-page" d="M171 70c22-11 46-10 69 0v82c-23-10-47-11-69 0V70Z"></path>
-                            <path class="book-page book-page-left" d="M171 70c-22-11-46-10-69 0v82c23-10 47-11 69 0V70Z"></path>
-                            <path class="book-line" d="M115 91h39M115 105h39M115 119h30M188 91h38M188 105h38M188 119h29"></path>
-                            <path class="person-shadow" d="M69 188h186"></path>
-                            <circle class="person-skin" cx="137" cy="76" r="13"></circle>
-                            <path class="person-hair" d="M124 75c0-17 26-21 29-3l-5 3-3-7-11 7Z"></path>
-                            <path class="person-shirt" d="m124 91 25-2 13 48-33 7-14-32Z"></path>
-                            <path class="person-arm" d="m124 98-19 26 9 5 21-20M150 98l20 20-5 7-25-17"></path>
-                            <path class="person-leg" d="m130 142-7 35h10l12-31M151 140l7 36h10l-2-40"></path>
-                            <path class="person-shoe" d="M121 176h16l-2 7h-19ZM156 175h15l6 7h-19Z"></path>
-                            <path class="accent-star" d="M251 60v16M243 68h16"></path>
-                            <circle class="accent-dot" cx="83" cy="80" r="4"></circle>
-                            <path class="accent-line" d="M83 154h28"></path>
-                        </svg>
+                    <div class="role-image-wrap student-image-wrap">
+                        <img
+                            class="role-image student-image"
+                            src="images/student-portal.png"
+                            alt="Student using a campus portal"
+                        >
                     </div>
 
                     <div class="role-card-copy">
-                        <span class="role-number">01</span>
-                        <h2>I'm a Student</h2>
-                        <p>Find a teacher and book a consultation time.</p>
+                        <h2>Student Portal</h2>
+                        <p>
+                            Find a teacher, book a consultation, and check
+                            your requests.
+                        </p>
+
                         <span class="role-action">
-                            Continue as student
+                            Continue to Student Portal
                             <span aria-hidden="true">→</span>
                         </span>
                     </div>
@@ -73,31 +68,23 @@
                     href="teacher-login.html"
                     data-role="teacher"
                 >
-                    <div class="illustration teacher-illustration" aria-hidden="true">
-                        <svg viewBox="0 0 320 220">
-                            <circle class="illustration-halo" cx="160" cy="108" r="88"></circle>
-                            <rect class="board" x="119" y="48" width="133" height="94" rx="8"></rect>
-                            <path class="board-line" d="M139 72h89M139 88h64M139 104h76"></path>
-                            <circle class="board-dot" cx="224" cy="119" r="8"></circle>
-                            <path class="person-shadow" d="M68 188h188"></path>
-                            <circle class="person-skin" cx="103" cy="77" r="13"></circle>
-                            <path class="person-hair" d="M90 77c0-17 25-21 28-4l-5 5-5-8-12 7Z"></path>
-                            <path class="teacher-shirt" d="m90 92 27-2 10 47-36 4-12-33Z"></path>
-                            <path class="person-arm" d="m91 99-19 27 8 5 23-21M115 99l19 14-4 7-24-11"></path>
-                            <path class="person-leg" d="m94 140-5 36h10l10-34M112 140l9 35h10l-4-38"></path>
-                            <path class="person-shoe" d="M87 176h15l-1 7H84ZM119 175h14l6 7h-18Z"></path>
-                            <path class="pointer" d="m135 112 10-24"></path>
-                            <circle class="accent-dot" cx="250" cy="55" r="4"></circle>
-                            <path class="accent-star" d="M76 57v16M68 65h16"></path>
-                        </svg>
+                    <div class="role-image-wrap teacher-image-wrap">
+                        <img
+                            class="role-image teacher-image"
+                            src="images/teacher-portal.png"
+                            alt="Teacher presenting to students"
+                        >
                     </div>
 
                     <div class="role-card-copy">
-                        <span class="role-number">02</span>
-                        <h2>I'm a Teacher</h2>
-                        <p>Set your available hours and manage student requests.</p>
+                        <h2>Teacher Portal</h2>
+                        <p>
+                            Set your available hours and manage student
+                            requests.
+                        </p>
+
                         <span class="role-action">
-                            Continue as teacher
+                            Continue to Teacher Portal
                             <span aria-hidden="true">→</span>
                         </span>
                     </div>
@@ -106,7 +93,7 @@
         </main>
 
         <footer class="site-footer">
-            <span>CampusConnect</span>
+            <span>Campus Connect · SWUST</span>
             <span>Connecting students and teachers</span>
         </footer>
     </div>

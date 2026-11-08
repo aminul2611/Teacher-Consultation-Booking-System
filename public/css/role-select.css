@@ -1,14 +1,15 @@
 :root {
-    font-family: Inter, "Segoe UI", Arial, sans-serif;
-    color: #1c2c45;
-    background: #f5f7fc;
+    font-family: "Segoe UI", Arial, sans-serif;
+    color: #19324d;
+    background: #f5f7fb;
     font-synthesis: none;
     text-rendering: optimizeLegibility;
-    --navy: #17324f;
-    --blue: #2878d0;
-    --purple: #6654c7;
-    --muted: #728198;
-    --border: #e0e6ef;
+
+    --navy: #173653;
+    --blue: #2878c8;
+    --purple: #705fc4;
+    --muted: #687c91;
+    --border: #dfe7f0;
 }
 
 * {
@@ -20,116 +21,131 @@ body {
     min-height: 100vh;
     margin: 0;
     background:
-        radial-gradient(ellipse at 15% 5%, #eaf1ff 0, transparent 34%),
-        radial-gradient(ellipse at 90% 88%, #f0edff 0, transparent 32%),
-        #f5f7fc;
+        radial-gradient(ellipse at 10% 10%, #e8f2ff 0, transparent 38%),
+        radial-gradient(ellipse at 90% 85%, #f0edff 0, transparent 38%),
+        #f5f7fb;
 }
 
 .page-shell {
-    width: min(1120px, calc(100% - 48px));
-    min-height: 100vh;
-    margin: 0 auto;
     display: flex;
+    width: min(1280px, calc(100% - 64px));
+    min-height: 100vh;
     flex-direction: column;
+    margin: 0 auto;
 }
 
 .site-header {
     display: flex;
-    min-height: 82px;
+    min-height: 104px;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
     border-bottom: 1px solid rgb(210 220 234 / 75%);
 }
 
 .brand {
     display: inline-flex;
     align-items: center;
-    gap: 11px;
+    gap: 14px;
     color: var(--navy);
     text-decoration: none;
 }
 
-.brand-mark {
+.brand-logo {
+    width: 58px;
+    height: 58px;
+    flex: 0 0 58px;
+    padding: 3px;
+    border: 2px solid #ffffff;
+    border-radius: 50%;
+    background: #ffffff;
+    object-fit: contain;
+    box-shadow:
+        0 0 0 3px #dce8f5,
+        0 6px 16px rgb(32 63 95 / 13%);
+}
+
+.brand-copy {
     display: grid;
-    width: 42px;
-    height: 42px;
-    place-items: center;
+    gap: 4px;
 }
 
-.brand-mark svg {
-    width: 100%;
-    height: 100%;
-    fill: var(--blue);
+.brand-copy strong {
+    color: var(--navy);
+    font-size: 22px;
+    font-weight: 750;
+    letter-spacing: -0.035em;
+    line-height: 1.1;
 }
 
-.brand-mark .brand-check {
-    fill: none;
-    stroke: #ffffff;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    stroke-width: 3;
-}
-
-.brand-name {
-    font-size: 17px;
+.brand-copy small {
+    color: var(--blue);
+    font-size: 11px;
     font-weight: 800;
-    letter-spacing: -0.02em;
+    letter-spacing: 0.22em;
 }
 
-.header-label,
+.welcome {
+    padding: 54px 0 32px;
+    text-align: center;
+}
+
 .eyebrow {
-    color: #73839a;
-    font-size: 10px;
+    margin: 0 0 13px;
+    color: var(--blue);
+    font-size: 14px;
     font-weight: 800;
     letter-spacing: 0.15em;
 }
 
-.welcome {
-    padding: 62px 0 34px;
-    text-align: center;
-}
-
-.welcome .eyebrow {
-    margin: 0 0 12px;
-    color: var(--blue);
-}
-
 .welcome h1 {
-    margin: 0 0 12px;
+    margin: 0 0 10px;
     color: var(--navy);
-    font-size: clamp(32px, 5vw, 46px);
+    font-size: clamp(34px, 5vw, 48px);
+    font-weight: 750;
     letter-spacing: -0.045em;
+    line-height: 1.1;
 }
 
 .welcome > p:last-child {
     margin: 0;
     color: var(--muted);
-    font-size: 15px;
+    font-size: 16px;
     line-height: 1.6;
 }
 
 .role-grid {
     display: grid;
+    width: min(100%, 1080px);
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 24px;
-    width: min(100%, 900px);
+    gap: 26px;
     margin: 0 auto;
 }
 
 .role-card {
     overflow: hidden;
     border: 1px solid var(--border);
-    border-radius: 20px;
+    border-radius: 22px;
     background: #ffffff;
     color: inherit;
     text-decoration: none;
-    box-shadow: 0 14px 36px rgb(29 51 82 / 7%);
-    transition: transform 180ms ease, box-shadow 180ms ease;
+    box-shadow: 0 12px 32px rgb(29 51 82 / 7%);
+    transition:
+        transform 220ms ease,
+        box-shadow 220ms ease,
+        border-color 220ms ease;
 }
 
 .role-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 20px 46px rgb(29 51 82 / 12%);
+    transform: translateY(-8px);
+    border-color: #b9cbe0;
+}
+
+.student-card:hover {
+    box-shadow: 0 24px 48px rgb(40 120 200 / 18%);
+}
+
+.teacher-card:hover {
+    box-shadow: 0 24px 48px rgb(112 95 196 / 18%);
 }
 
 .role-card:focus-visible {
@@ -137,158 +153,57 @@ body {
     outline-offset: 4px;
 }
 
-.illustration {
+.role-image-wrap {
     display: grid;
-    min-height: 238px;
+    min-height: 280px;
     place-items: center;
-    padding: 20px 28px 0;
+    overflow: hidden;
+    padding: 22px;
 }
 
-.student-illustration {
-    background: linear-gradient(135deg, #eff6ff, #e7f0ff);
+.student-image-wrap {
+    background: linear-gradient(135deg, #e8f3ff, #dfeeff);
 }
 
-.teacher-illustration {
-    background: linear-gradient(135deg, #f1efff, #e9e8ff);
+.teacher-image-wrap {
+    background: linear-gradient(135deg, #f0edff, #e9e5ff);
 }
 
-.illustration svg {
-    width: min(100%, 320px);
-    height: auto;
+.role-image {
+    display: block;
+    width: 100%;
+    height: 230px;
+    object-fit: contain;
+    transition: transform 220ms ease;
 }
 
-.illustration-halo {
-    fill: #d5e5ff;
+.role-card:hover .role-image {
+    transform: scale(1.045);
 }
 
-.teacher-illustration .illustration-halo {
-    fill: #ddd9ff;
-}
-
-.book-page {
-    fill: #ffffff;
-    stroke: #83a9e7;
-    stroke-width: 3;
-}
-
-.book-page-left {
-    fill: #f8fbff;
-}
-
-.book-line,
-.board-line {
-    fill: none;
-    stroke: #b2c3dc;
-    stroke-linecap: round;
-    stroke-width: 3;
-}
-
-.person-shadow {
-    fill: none;
-    stroke: #435978;
-    stroke-linecap: round;
-    stroke-width: 3;
-}
-
-.person-skin {
-    fill: #f3bd91;
-}
-
-.person-hair {
-    fill: #29385a;
-}
-
-.person-shirt {
-    fill: #3977d1;
-}
-
-.teacher-shirt {
-    fill: #f07945;
-}
-
-.person-arm {
-    fill: none;
-    stroke: #f3bd91;
-    stroke-linecap: round;
-    stroke-width: 8;
-}
-
-.person-leg {
-    fill: none;
-    stroke: #29385a;
-    stroke-linecap: round;
-    stroke-width: 9;
-}
-
-.person-shoe {
-    fill: #29385a;
-}
-
-.accent-star,
-.accent-line {
-    fill: none;
-    stroke: #45b8c4;
-    stroke-linecap: round;
-    stroke-width: 3;
-}
-
-.teacher-illustration .accent-star {
-    stroke: #8174dc;
-}
-
-.accent-dot {
-    fill: #45b8c4;
-}
-
-.teacher-illustration .accent-dot {
-    fill: #8174dc;
-}
-
-.board {
-    fill: #ffffff;
-    stroke: #9c93e7;
-    stroke-width: 3;
-}
-
-.board-dot {
-    fill: #8d80df;
-}
-
-.pointer {
-    fill: none;
-    stroke: #f3bd91;
-    stroke-linecap: round;
-    stroke-width: 4;
+/* Blend the white background in the student image into its card. */
+.student-image {
+    mix-blend-mode: multiply;
 }
 
 .role-card-copy {
-    padding: 22px 25px 25px;
-}
-
-.role-number {
-    color: var(--blue);
-    font-size: 10px;
-    font-weight: 800;
-    letter-spacing: 0.13em;
-}
-
-.teacher-card .role-number {
-    color: var(--purple);
+    padding: 25px 28px 26px;
 }
 
 .role-card h2 {
-    margin: 8px 0;
+    margin: 0 0 9px;
     color: var(--navy);
-    font-size: 22px;
-    letter-spacing: -0.03em;
+    font-size: 24px;
+    font-weight: 750;
+    letter-spacing: -0.025em;
 }
 
 .role-card-copy > p {
-    min-height: 42px;
+    min-height: 46px;
     margin: 0;
-    color: var(--muted);
-    font-size: 14px;
-    line-height: 1.55;
+    color: #536b84;
+    font-size: 15px;
+    line-height: 1.6;
 }
 
 .role-action {
@@ -296,10 +211,10 @@ body {
     align-items: center;
     justify-content: space-between;
     margin-top: 20px;
-    padding-top: 16px;
-    border-top: 1px solid #edf0f5;
+    padding-top: 17px;
+    border-top: 1px solid #e9eef4;
     color: var(--blue);
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 750;
 }
 
@@ -308,12 +223,12 @@ body {
 }
 
 .role-action span {
-    font-size: 20px;
+    font-size: 21px;
     transition: transform 180ms ease;
 }
 
 .role-card:hover .role-action span {
-    transform: translateX(4px);
+    transform: translateX(5px);
 }
 
 .site-footer {
@@ -322,26 +237,48 @@ body {
     gap: 16px;
     margin-top: auto;
     padding: 28px 0 22px;
-    color: #8996a8;
-    font-size: 12px;
+    color: #71839a;
+    font-size: 13px;
 }
 
-@media (max-width: 680px) {
+@media (max-width: 760px) {
     .page-shell {
-        width: min(100% - 28px, 500px);
+        width: min(100% - 32px, 560px);
+    }
+
+    .site-header {
+        min-height: 86px;
+    }
+
+    .brand-logo {
+        width: 50px;
+        height: 50px;
+        flex-basis: 50px;
+    }
+
+    .brand-copy strong {
+        font-size: 19px;
     }
 
     .welcome {
         padding: 42px 0 26px;
     }
 
-    .role-grid {
-        grid-template-columns: 1fr;
-        gap: 17px;
+    .eyebrow {
+        font-size: 12px;
     }
 
-    .illustration {
-        min-height: 215px;
+    .role-grid {
+        grid-template-columns: 1fr;
+        gap: 18px;
+    }
+
+    .role-image-wrap {
+        min-height: 245px;
+    }
+
+    .role-image {
+        height: 205px;
     }
 
     .role-card-copy > p {
@@ -350,16 +287,101 @@ body {
 
     .site-footer {
         flex-direction: column;
-        gap: 6px;
+        gap: 7px;
         text-align: center;
     }
 }
 
-@media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
-        scroll-behavior: auto !important;
-        transition-duration: 0.01ms !important;
+@media (max-width: 420px) {
+    .page-shell {
+        width: min(100% - 24px, 380px);
     }
+
+    .brand-logo {
+        width: 46px;
+        height: 46px;
+        flex-basis: 46px;
+    }
+
+    .brand-copy strong {
+        font-size: 18px;
+    }
+
+    .role-image-wrap {
+        min-height: 220px;
+    }
+
+    .role-image {
+        height: 185px;
+    }
+
+    .role-card-copy {
+        padding: 22px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .role-card,
+    .role-image,
+    .role-action span {
+        transition: none;
+    }
+}
+.site-header {
+    display: flex;
+    min-height: 104px;
+    align-items: center;
+    justify-content: center;
+    border-bottom: 1px solid rgb(210 220 234 / 75%);
+}
+
+.brand {
+    display: inline-flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 14px;
+    color: var(--navy);
+    text-align: left;
+    text-decoration: none;
+}
+
+.brand-logo {
+    width: 58px;
+    height: 58px;
+    flex: 0 0 58px;
+    padding: 3px;
+    border: 2px solid #ffffff;
+    border-radius: 50%;
+    background: #ffffff;
+    object-fit: contain;
+    box-shadow:
+        0 0 0 3px #dce8f5,
+        0 6px 16px rgb(32 63 95 / 13%);
+}
+
+.brand-copy {
+    display: grid;
+    justify-items: start;
+    gap: 4px;
+}
+
+.brand-copy strong {
+    color: var(--navy);
+    font-size: 22px;
+    font-weight: 750;
+    letter-spacing: -0.035em;
+    line-height: 1.1;
+}
+
+.brand-copy small {
+    color: var(--blue);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.22em;
+}
+.brand-copy {
+    display: grid;
+    justify-items: center;
+    gap: 4px;
+    text-align: center;
 }
