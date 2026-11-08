@@ -236,7 +236,9 @@ registerForm.addEventListener("submit", async (event) => {
 
     try {
         const password = getInputValue("teacher-register-password");
-        const confirmPassword = getInputValue("teacher-confirm-password");
+        const confirmPassword = getInputValue(
+            "teacher-confirm-password"
+        );
 
         if (password !== confirmPassword) {
             throw new Error("The passwords do not match.");
@@ -251,10 +253,7 @@ registerForm.addEventListener("submit", async (event) => {
             email: getInputValue("teacher-register-email"),
             password,
             role: "teacher",
-
-            // The current auth database stores Teacher ID in student_id.
             student_id: getInputValue("teacher-id"),
-
             department: getInputValue("teacher-department"),
             teacher_code: "",
             photo_data: photoData,
@@ -262,15 +261,20 @@ registerForm.addEventListener("submit", async (event) => {
 
         await registerUser(teacherDetails);
 
-        document.getElementById("teacher-login-email").value =
-            teacherDetails.email;
+        const loginEmail = document.getElementById(
+            "teacher-login-email"
+        );
+
+        if (loginEmail) {
+            loginEmail.value = teacherDetails.email;
+        }
 
         registerForm.reset();
         resetPhotoPreview();
-        showLoginForm(false);
 
+        showLoginForm(false);
         showMessage(
-            "Account created successfully. Please sign in.",
+            "Account submitted for approval. You can sign in after approval.",
             "success"
         );
     } catch (error) {

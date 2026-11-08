@@ -31,6 +31,8 @@ def setup_auth_database():
                 email TEXT NOT NULL UNIQUE COLLATE NOCASE,
                 full_name TEXT NOT NULL,
                 role TEXT NOT NULL CHECK (role IN ('student', 'teacher')),
+                approval_status TEXT NOT NULL DEFAULT 'approved'
+                    CHECK (approval_status IN ('pending', 'approved')),
                 student_id TEXT,
                 department TEXT,
                 photo_path TEXT,
@@ -39,6 +41,20 @@ def setup_auth_database():
                 created_at INTEGER NOT NULL
             )
         """)
+
+        # Existing users are kept approved when this column is added.
+        columns = {
+            row["name"]
+            for row in db.execute(
+                "PRAGMA table_info(users)"
+            ).fetchall()
+        }
+
+        if "approval_status" not in columns:
+            db.execute("""
+                ALTER TABLE users
+                ADD COLUMN approval_status TEXT NOT NULL DEFAULT 'approved'
+            """)
 
         db.execute("""
             CREATE TABLE IF NOT EXISTS sessions (
@@ -69,11 +85,15 @@ def register_user(
     teacher_code="",
     photo_data="",
 ):
-    email = email.strip().lower()
-    full_name = full_name.strip()
-    role = role.strip().lower()
+    email = (email or "").strip().lower()
+    full_name = (full_name or "").strip()
+    role = (role or "").strip().lower()
     student_id = (student_id or "").strip()
     department = (department or "").strip()
+
+    # Keep teacher_code in the function signature for server compatibility.
+    # Teacher registration now uses approval instead of an invitation code.
+    _ = teacher_code
 
     if not email or "@" not in email:
         raise ValueError("Enter a valid email address.")
@@ -86,6 +106,8 @@ def register_user(
 
     if role not in ("student", "teacher"):
         raise ValueError("Role must be student or teacher.")
+
+    approval_status = "pending" if role == "teacher" else "approved"
 
     photo_path = save_profile_photo(photo_data)
 
@@ -101,6 +123,7 @@ def register_user(
                     email,
                     full_name,
                     role,
+                    approval_status,
                     student_id,
                     department,
                     photo_path,
@@ -108,12 +131,13 @@ def register_user(
                     password_hash,
                     created_at
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 user_id,
                 email,
                 full_name,
                 role,
+                approval_status,
                 student_id,
                 department,
                 photo_path,
@@ -128,19 +152,30 @@ def register_user(
         delete_profile_photo(photo_path)
         raise
 
+    message = (
+        "Teacher account submitted for approval."
+        if role == "teacher"
+        else "Student account created successfully."
+    )
+
     return {
         "id": user_id,
         "email": email,
         "full_name": full_name,
         "role": role,
+        "approval_status": approval_status,
         "student_id": student_id,
         "department": department,
         "photo_path": photo_path,
+        "message": message,
     }
 
 
 def login_user(email, password):
-    email = email.strip().lower()
+    email = (email or "").strip().lower()
+
+    if not isinstance(password, str):
+        raise ValueError("Email or password is incorrect.")
 
     with connect_db() as db:
         user = db.execute("""
@@ -160,6 +195,14 @@ def login_user(email, password):
             user["password_hash"],
         ):
             raise ValueError("Email or password is incorrect.")
+
+        if (
+            user["role"] == "teacher"
+            and user["approval_status"] != "approved"
+        ):
+            raise ValueError(
+                "Your teacher account is awaiting approval."
+            )
 
         token = secrets.token_urlsafe(32)
         expires_at = int(time.time()) + SESSION_LIFETIME_SECONDS
@@ -181,6 +224,7 @@ def login_user(email, password):
             "email": user["email"],
             "full_name": user["full_name"],
             "role": user["role"],
+            "approval_status": user["approval_status"],
             "student_id": user["student_id"],
             "department": user["department"],
             "photo_path": user["photo_path"],
@@ -199,6 +243,7 @@ def get_user_from_token(token):
                 users.email,
                 users.full_name,
                 users.role,
+                users.approval_status,
                 users.student_id,
                 users.department,
                 users.photo_path
@@ -210,6 +255,12 @@ def get_user_from_token(token):
 
     if user is None:
         raise ValueError("Your session has expired. Please log in again.")
+
+    if (
+        user["role"] == "teacher"
+        and user["approval_status"] != "approved"
+    ):
+        raise ValueError("Your teacher account is awaiting approval.")
 
     return dict(user)
 
@@ -234,6 +285,42 @@ def logout_user(token):
         )
 
     return {"message": "Logged out."}
+
+
+def list_pending_teacher_accounts():
+    with connect_db() as db:
+        rows = db.execute("""
+            SELECT email, full_name, student_id, department, created_at
+            FROM users
+            WHERE role = 'teacher'
+              AND approval_status = 'pending'
+            ORDER BY created_at
+        """).fetchall()
+
+    return [dict(row) for row in rows]
+
+
+def approve_teacher_account(email):
+    email = (email or "").strip().lower()
+
+    if not email:
+        raise ValueError("Enter the teacher's email address.")
+
+    with connect_db() as db:
+        result = db.execute("""
+            UPDATE users
+            SET approval_status = 'approved'
+            WHERE email = ?
+              AND role = 'teacher'
+              AND approval_status = 'pending'
+        """, (email,))
+
+        if result.rowcount != 1:
+            raise ValueError(
+                "No pending teacher account was found for that email."
+            )
+
+    return {"message": f"Teacher account approved: {email}"}
 
 
 if __name__ == "__main__":
