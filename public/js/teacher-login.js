@@ -4,45 +4,93 @@ import {
     registerUser,
 } from "./rpc.js";
 
-const loginForm = document.getElementById("login-form");
-const registerForm = document.getElementById("register-form");
-const loginTab = document.getElementById("login-tab");
-const registerTab = document.getElementById("register-tab");
-const formTitle = document.getElementById("form-title");
-const formDescription = document.getElementById("form-description");
-const statusMessage = document.getElementById("auth-status");
-const photoInput = document.getElementById("profile-photo");
-const photoPreview = document.getElementById("photo-preview");
+const loginTab = document.getElementById("teacher-login-tab");
+const registerTab = document.getElementById("teacher-register-tab");
+
+const loginPanel = document.getElementById("teacher-login-panel");
+const registerPanel = document.getElementById("teacher-register-panel");
+
+const loginForm = document.getElementById("teacher-login-form");
+const registerForm = document.getElementById("teacher-register-form");
+
+const heading = document.getElementById("teacher-auth-heading");
+const description = document.getElementById("teacher-auth-description");
+const messageBox = document.getElementById("teacher-auth-message");
+
+const photoInput = document.getElementById("teacher-profile-photo");
+const photoPreview = document.getElementById("teacher-photo-preview");
 
 const MAX_PHOTO_BYTES = 2 * 1024 * 1024;
+const ALLOWED_PHOTO_TYPES = [
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+];
 
-function showMessage(message) {
-    statusMessage.textContent = message;
+function showMessage(message, type = "error") {
+    messageBox.textContent = message;
+    messageBox.className = `form-message ${type}`;
+    messageBox.hidden = !message;
 }
 
-function showLoginForm() {
-    loginForm.hidden = false;
-    registerForm.hidden = true;
+function getInputValue(id) {
+    const input = document.getElementById(id);
+
+    if (!input) {
+        throw new Error(`Required form field is missing: ${id}`);
+    }
+
+    return input.value.trim();
+}
+
+function showLoginForm(clearMessage = true) {
+    loginPanel.hidden = false;
+    registerPanel.hidden = true;
+
     loginTab.classList.add("active");
     registerTab.classList.remove("active");
-    formTitle.textContent = "Welcome back";
-    formDescription.textContent = "Sign in to your teacher account.";
-    showMessage("");
+
+    loginTab.setAttribute("aria-selected", "true");
+    registerTab.setAttribute("aria-selected", "false");
+
+    heading.textContent = "Welcome back";
+    description.textContent = "Sign in to your teacher account.";
+
+    if (clearMessage) {
+        showMessage("");
+    }
 }
 
 function showRegisterForm() {
-    loginForm.hidden = true;
-    registerForm.hidden = false;
+    loginPanel.hidden = true;
+    registerPanel.hidden = false;
+
     loginTab.classList.remove("active");
     registerTab.classList.add("active");
-    formTitle.textContent = "Create your account";
-    formDescription.textContent = "Set up your teacher profile.";
+
+    loginTab.setAttribute("aria-selected", "false");
+    registerTab.setAttribute("aria-selected", "true");
+
+    heading.textContent = "Create your account";
+    description.textContent = "Set up your teacher profile.";
+
     showMessage("");
+}
+
+function resetPhotoPreview() {
+    photoPreview.src = "";
+    photoPreview.hidden = true;
 }
 
 function readPhotoAsDataUrl(file) {
     if (!file) {
         return Promise.resolve("");
+    }
+
+    if (!ALLOWED_PHOTO_TYPES.includes(file.type)) {
+        return Promise.reject(
+            new Error("Choose a JPG, PNG, or WebP image.")
+        );
     }
 
     if (file.size > MAX_PHOTO_BYTES) {
@@ -66,46 +114,73 @@ function readPhotoAsDataUrl(file) {
     });
 }
 
-loginTab.addEventListener("click", showLoginForm);
+loginTab.addEventListener("click", () => {
+    showLoginForm();
+});
+
 registerTab.addEventListener("click", showRegisterForm);
+
+document
+    .querySelectorAll("[data-password-toggle]")
+    .forEach((button) => {
+        button.addEventListener("click", () => {
+            const inputId = button.dataset.passwordToggle;
+            const input = document.getElementById(inputId);
+
+            if (!input) {
+                showMessage(`Password field is missing: ${inputId}`);
+                return;
+            }
+
+            const showPassword = input.type === "password";
+
+            input.type = showPassword ? "text" : "password";
+            button.textContent = showPassword ? "Hide" : "Show";
+            button.setAttribute(
+                "aria-label",
+                showPassword ? "Hide password" : "Show password"
+            );
+            button.setAttribute(
+                "aria-pressed",
+                String(showPassword)
+            );
+        });
+    });
 
 photoInput.addEventListener("change", () => {
     const file = photoInput.files[0];
 
     if (!file) {
-        photoPreview.replaceChildren();
-        photoPreview.textContent = "T";
+        resetPhotoPreview();
+        showMessage("");
         return;
     }
 
-    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
-        showMessage("Choose a JPG, PNG, or WebP image.");
+    if (!ALLOWED_PHOTO_TYPES.includes(file.type)) {
         photoInput.value = "";
-        photoPreview.replaceChildren();
-        photoPreview.textContent = "T";
+        resetPhotoPreview();
+        showMessage("Choose a JPG, PNG, or WebP image.");
         return;
     }
 
     if (file.size > MAX_PHOTO_BYTES) {
-        showMessage("The profile picture must be 2 MB or smaller.");
         photoInput.value = "";
-        photoPreview.replaceChildren();
-        photoPreview.textContent = "T";
+        resetPhotoPreview();
+        showMessage("The profile picture must be 2 MB or smaller.");
         return;
     }
 
-    const image = document.createElement("img");
-    image.alt = "Selected profile picture";
-    image.src = URL.createObjectURL(file);
-
-    photoPreview.replaceChildren(image);
+    photoPreview.src = URL.createObjectURL(file);
+    photoPreview.hidden = false;
     showMessage("");
 });
 
 loginForm.addEventListener("submit", async (event) => {
     event.preventDefault();
 
-    const submitButton = loginForm.querySelector('button[type="submit"]');
+    const submitButton = loginForm.querySelector(
+        'button[type="submit"]'
+    );
     const formData = new FormData(loginForm);
 
     submitButton.disabled = true;
@@ -114,18 +189,35 @@ loginForm.addEventListener("submit", async (event) => {
 
     try {
         const user = await loginUser(
-            formData.get("email").trim(),
-            formData.get("password")
+            String(formData.get("email") || "").trim(),
+            String(formData.get("password") || "")
         );
 
         if (user.role !== "teacher") {
             await logoutUser();
-            throw new Error("This account is not registered as a teacher.");
+            showMessage("This account is not registered as a teacher.");
+            return;
         }
 
-        window.location.href = "/teacher.html";
+        showMessage(
+            "Login successful! Opening your teacher dashboard...",
+            "success"
+        );
+
+        window.setTimeout(() => {
+            window.location.href = "/teacher.html";
+        }, 1000);
     } catch (error) {
-        showMessage(error.message);
+        const errorText = error.message || "";
+
+        if (/email|password|incorrect|invalid credential/i.test(errorText)) {
+            showMessage(
+                "Email or password is incorrect. Please try again."
+            );
+        } else {
+            showMessage(errorText || "Login failed. Please try again.");
+        }
+    } finally {
         submitButton.disabled = false;
         submitButton.textContent = "Sign in";
     }
@@ -143,40 +235,52 @@ registerForm.addEventListener("submit", async (event) => {
     showMessage("");
 
     try {
+        const password = getInputValue("teacher-register-password");
+        const confirmPassword = getInputValue("teacher-confirm-password");
+
+        if (password !== confirmPassword) {
+            throw new Error("The passwords do not match.");
+        }
+
         const photoData = await readPhotoAsDataUrl(
             photoInput.files[0]
         );
 
-        const userDetails = {
-            full_name: document.getElementById("register-name").value.trim(),
-            email: document.getElementById("register-email").value.trim(),
-            password: document.getElementById("register-password").value,
+        const teacherDetails = {
+            full_name: getInputValue("teacher-full-name"),
+            email: getInputValue("teacher-register-email"),
+            password,
             role: "teacher",
-            student_id: "",
-            department: document
-                .getElementById("teacher-department")
-                .value.trim(),
-            teacher_code: document
-                .getElementById("teacher-code")
-                .value,
+
+            // The current auth database stores Teacher ID in student_id.
+            student_id: getInputValue("teacher-id"),
+
+            department: getInputValue("teacher-department"),
+            teacher_code: "",
             photo_data: photoData,
         };
 
-        await registerUser(userDetails);
+        await registerUser(teacherDetails);
 
-        document.getElementById("login-email").value = userDetails.email;
-        document.getElementById("login-password").value = "";
+        document.getElementById("teacher-login-email").value =
+            teacherDetails.email;
 
         registerForm.reset();
-        photoPreview.replaceChildren();
-        photoPreview.textContent = "T";
+        resetPhotoPreview();
+        showLoginForm(false);
 
-        showLoginForm();
-        showMessage("Account created. Sign in with your email and password.");
+        showMessage(
+            "Account created successfully. Please sign in.",
+            "success"
+        );
     } catch (error) {
-        showMessage(error.message);
+        showMessage(
+            error.message || "Account creation failed. Please try again."
+        );
     } finally {
         submitButton.disabled = false;
         submitButton.textContent = "Create teacher account";
     }
 });
+
+showLoginForm();

@@ -1,6 +1,5 @@
 import hashlib
 import hmac
-import os
 import secrets
 import sqlite3
 import time
@@ -10,11 +9,8 @@ from pathlib import Path
 from profile_photos import delete_profile_photo, save_profile_photo
 
 
-PROJECT_DIR = Path(__file__).parent
+PROJECT_DIR = Path(__file__).resolve().parent
 DATABASE = PROJECT_DIR / "campusconnect_auth.db"
-
-# Set this in PyCharm before enabling teacher registration.
-TEACHER_INVITE_CODE = os.environ.get("TEACHER_INVITE_CODE", "")
 
 PASSWORD_ITERATIONS = 310_000
 SESSION_LIFETIME_SECONDS = 7 * 24 * 60 * 60
@@ -78,7 +74,6 @@ def register_user(
     role = role.strip().lower()
     student_id = (student_id or "").strip()
     department = (department or "").strip()
-    teacher_code = teacher_code or ""
 
     if not email or "@" not in email:
         raise ValueError("Enter a valid email address.")
@@ -92,14 +87,6 @@ def register_user(
     if role not in ("student", "teacher"):
         raise ValueError("Role must be student or teacher.")
 
-    if role == "teacher":
-        if not TEACHER_INVITE_CODE:
-            raise ValueError("Teacher registration is not enabled yet.")
-
-        if not hmac.compare_digest(teacher_code, TEACHER_INVITE_CODE):
-            raise ValueError("Invalid teacher invitation code.")
-
-    # The profile photo is optional. This returns None when no photo is sent.
     photo_path = save_profile_photo(photo_data)
 
     user_id = str(uuid.uuid4())

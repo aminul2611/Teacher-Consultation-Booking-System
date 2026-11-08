@@ -12,6 +12,7 @@ from auth import (
 )
 
 from booking import (
+    get_teacher_slots,
     add_teacher_slot,
     book_slot,
     get_available_slots,
@@ -73,12 +74,14 @@ def run_rpc_method(method, params):
         return logout_user(params.get("token", ""))
 
     token = params.get("token", "")
+    if method == "get_available_slots":
+        return get_available_slots(token)
 
     if method == "get_teachers":
         return get_teachers(token)
 
-    if method == "get_available_slots":
-        return get_available_slots(token)
+    if method == "get_teacher_slots":
+        return get_teacher_slots(token)
 
     if method == "add_teacher_slot":
         return add_teacher_slot(

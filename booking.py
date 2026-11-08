@@ -211,6 +211,36 @@ def add_teacher_slot(token, starts_at, ends_at):
     return {"message": "Available slot added."}
 
 
+def get_teacher_slots(token):
+    teacher = require_role(token, "teacher")
+
+    with connect_db() as db:
+        rows = db.execute("""
+            SELECT
+                s.id,
+                s.starts_at,
+                s.ends_at,
+                s.booked_by_student,
+                u.full_name AS student_name
+            FROM teacher_slots AS s
+            LEFT JOIN users AS u
+                ON u.id = s.booked_by_student
+            WHERE s.teacher_id = ?
+            ORDER BY s.starts_at DESC
+        """, (teacher["id"],)).fetchall()
+
+    slots = []
+
+    for row in rows:
+        slot = dict(row)
+        slot["status"] = (
+            "booked" if slot["booked_by_student"] else "available"
+        )
+        slots.append(slot)
+
+    return slots
+
+
 def book_slot(token, slot_id):
     student = require_role(token, "student")
     slot_id = _positive_id(slot_id, "slot")
@@ -250,7 +280,9 @@ def book_slot(token, slot_id):
         )).fetchone()
 
         if conflict:
-            raise ValueError("You or the teacher already has an appointment at this time.")
+            raise ValueError(
+                "You or the teacher already has an appointment at this time."
+            )
 
         updated = db.execute("""
             UPDATE teacher_slots
@@ -353,7 +385,9 @@ def _create_appointment(db, teacher_id, student_id, start, request_id=None):
     """, (teacher_id, student_id, end_text, start_text)).fetchone()
 
     if conflict:
-        raise ValueError("You or the teacher already has an appointment at this time.")
+        raise ValueError(
+            "You or the teacher already has an appointment at this time."
+        )
 
     db.execute("""
         INSERT INTO appointments (

@@ -3,110 +3,199 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#f4f7fb">
-    <title>Teacher | CampusConnect</title>
+    <meta
+        name="description"
+        content="Set your availability and manage student consultation requests."
+    >
+    <title>Teacher Dashboard | Campus Connect</title>
     <link rel="stylesheet" href="css/teacher.css">
+    <script type="module" src="js/teacher.js"></script>
 </head>
+
 <body>
-    <div class="page-shell">
-        <header class="topbar">
-            <a class="brand" href="teacher.html">
-                <span class="brand-mark">CC</span>
-                <span>CampusConnect</span>
+    <div class="teacher-dashboard-shell">
+        <header class="teacher-dashboard-header">
+            <a
+                class="teacher-brand-lockup"
+                href="index.html"
+                aria-label="Campus Connect home"
+            >
+                <img
+                    class="teacher-brand-logo"
+                    src="images/campus-logo.png"
+                    alt="SWUST logo"
+                >
+                <span class="teacher-brand-copy">
+                    <span class="teacher-brand-name">Campus Connect</span>
+                    <span class="teacher-brand-subtitle">SWUST</span>
+                </span>
             </a>
 
-            <div class="profile-area">
-                <div id="profile-avatar" class="avatar" aria-hidden="true">T</div>
-                <div class="profile-details">
-                    <span id="teacher-name" class="profile-name">Teacher</span>
-                    <span id="teacher-department" class="profile-department"></span>
-                </div>
-                <button id="logout-button" class="button button-outline" type="button">
+            <div class="teacher-account-actions">
+                <div
+                    class="teacher-avatar"
+                    id="teacher-avatar"
+                    aria-hidden="true"
+                >T</div>
+
+                <span class="teacher-name" id="teacher-name">Teacher</span>
+
+                <button
+                    class="teacher-secondary-button"
+                    id="teacher-logout-button"
+                    type="button"
+                >
                     Log out
                 </button>
             </div>
         </header>
 
-        <main>
-            <section class="welcome-section">
-                <p class="eyebrow">TEACHER WORKSPACE</p>
-                <h1>Manage your consultations</h1>
-                <p>Add your available hours and respond to student requests.</p>
+        <main class="teacher-dashboard-main">
+            <section class="teacher-page-intro">
+                <div class="teacher-intro-copy">
+                    <p class="teacher-eyebrow">TEACHER WORKSPACE</p>
+                    <h1>Manage consultations</h1>
+                    <p>
+                        Set your available times and respond to student requests.
+                    </p>
+                </div>
             </section>
 
-            <section class="content-section" aria-labelledby="slot-heading">
-                <div class="section-heading">
+            <div
+                class="teacher-dashboard-message"
+                id="teacher-message"
+                role="status"
+                aria-live="polite"
+                hidden
+            ></div>
+
+            <section
+                class="teacher-dashboard-card"
+                aria-labelledby="availability-title"
+            >
+                <div class="teacher-card-heading">
                     <div>
-                        <p class="eyebrow">SET YOUR AVAILABILITY</p>
-                        <h2 id="slot-heading">Add a consultation slot</h2>
+                        <p class="teacher-eyebrow">SET YOUR SCHEDULE</p>
+                        <h2 id="availability-title">Add available time</h2>
+                        <p class="teacher-card-description">
+                            Students can book a slot after you add it.
+                        </p>
                     </div>
                 </div>
 
-                <p class="section-description">
-                    Students can book a slot after you add it.
-                </p>
+                <form id="teacher-availability-form" class="teacher-form">
+                    <div class="teacher-form-field">
+                        <label for="slot-start-date-display">
+                            Date (DD/MM/YYYY)
+                        </label>
 
-                <form id="slot-form" class="slot-form">
-                    <div class="form-field">
-                        <label for="slot-date">Date</label>
-                        <input id="slot-date" name="date" type="date" required>
+                        <div class="teacher-date-picker-control">
+                            <input
+                                id="slot-start-date-display"
+                                type="text"
+                                placeholder="DD/MM/YYYY"
+                                readonly
+                                aria-label="Date in day, month, year format"
+                            >
+
+                            <span
+                                class="teacher-calendar-icon"
+                                aria-hidden="true"
+                            >▦</span>
+
+                            <input
+                                id="slot-start-date"
+                                type="date"
+                                required
+                                aria-label="Choose slot date"
+                            >
+                        </div>
                     </div>
 
-                    <div class="form-field">
+                    <div class="teacher-form-field">
                         <label for="slot-start-time">Start time</label>
                         <input
                             id="slot-start-time"
-                            name="start_time"
                             type="time"
                             required
                         >
                     </div>
 
-                    <div class="form-field">
+                    <div class="teacher-form-field">
                         <label for="slot-end-time">End time</label>
                         <input
                             id="slot-end-time"
-                            name="end_time"
                             type="time"
                             required
                         >
                     </div>
 
-                    <div class="form-field form-button-field">
-                        <button class="button button-primary" type="submit">
-                            Add slot
-                        </button>
-                    </div>
+                    <button class="teacher-primary-button" type="submit">
+                        Add available time
+                    </button>
                 </form>
-
-                <p id="slot-status" class="status-message" role="status" aria-live="polite"></p>
             </section>
 
-            <section class="content-section" aria-labelledby="requests-heading">
-                <div class="section-heading">
+            <section
+                class="teacher-dashboard-card"
+                aria-labelledby="slots-title"
+            >
+                <div class="teacher-card-heading">
                     <div>
-                        <p class="eyebrow">STUDENT MESSAGES</p>
-                        <h2 id="requests-heading">Consultation requests</h2>
+                        <p class="teacher-eyebrow">YOUR SCHEDULE</p>
+                        <h2 id="slots-title">Available slots</h2>
                     </div>
 
-                    <button id="refresh-requests-button" class="button button-outline" type="button">
+                    <button
+                        class="teacher-secondary-button"
+                        id="teacher-refresh-slots"
+                        type="button"
+                    >
                         Refresh
                     </button>
                 </div>
 
-                <p id="requests-status" class="status-message" role="status" aria-live="polite">
-                    Loading consultation requests...
-                </p>
+                <div class="teacher-slots-list" id="teacher-slots">
+                    <p class="teacher-empty-state">
+                        Loading your available slots...
+                    </p>
+                </div>
+            </section>
 
-                <div id="requests-list" class="card-grid"></div>
+            <section
+                class="teacher-dashboard-card"
+                aria-labelledby="requests-title"
+            >
+                <div class="teacher-card-heading">
+                    <div>
+                        <p class="teacher-eyebrow">STUDENT ACTIVITY</p>
+                        <h2 id="requests-title">Student requests</h2>
+                        <p class="teacher-card-description">
+                            Accept, reject, or suggest another time for a request.
+                        </p>
+                    </div>
+
+                    <button
+                        class="teacher-secondary-button"
+                        id="teacher-refresh-requests"
+                        type="button"
+                    >
+                        Refresh
+                    </button>
+                </div>
+
+                <div class="teacher-requests-list" id="teacher-requests">
+                    <p class="teacher-empty-state">
+                        Loading student requests...
+                    </p>
+                </div>
             </section>
         </main>
 
-        <footer class="footer">
-            CampusConnect · Teacher workspace
+        <footer class="teacher-dashboard-footer">
+            <span>Campus Connect · SWUST</span>
+            <span>Connecting students and teachers</span>
         </footer>
     </div>
-
-    <script type="module" src="js/teacher.js"></script>
 </body>
 </html>
