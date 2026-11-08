@@ -382,6 +382,13 @@ body {
 .brand-copy {
     display: grid;
     justify-items: center;
-    gap: 4px;
+    gap: 2px;
     text-align: center;
+}
+.site-header {
+    min-height: 82px;
+}
+
+.welcome {
+    padding: 38px 0 32px;
 }

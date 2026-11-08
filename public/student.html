@@ -3,94 +3,174 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#f4f7fb">
-    <title>Student | CampusConnect</title>
+    <meta
+        name="description"
+        content="Find teachers and book Campus Connect consultations."
+    >
+    <title>Student Dashboard | Campus Connect</title>
+
     <link rel="stylesheet" href="css/student.css">
+    <script type="module" src="js/student.js"></script>
 </head>
+
 <body>
-    <div class="page-shell">
-        <header class="topbar">
-            <a class="brand" href="student.html">
-                <span class="brand-mark">CC</span>
-                <span>CampusConnect</span>
+    <div class="dashboard-shell">
+        <header class="dashboard-header">
+            <a class="brand-lockup" href="index.html" aria-label="Campus Connect home">
+                <img
+                    class="brand-logo"
+                    src="images/campus-logo.png"
+                    alt="SWUST logo"
+                >
+                <span class="brand-copy">
+                    <span class="brand-name">Campus Connect</span>
+                    <span class="brand-subtitle">SWUST</span>
+                </span>
             </a>
 
-            <div class="profile-area">
-                <div id="profile-avatar" class="avatar" aria-hidden="true">S</div>
-                <span id="student-name" class="profile-name">Student</span>
-                <button id="logout-button" class="button button-outline" type="button">
+            <div class="account-actions">
+                <div class="student-avatar" id="student-avatar" aria-hidden="true">
+                    ST
+                </div>
+                <span class="student-name" id="student-name">Student</span>
+                <button class="secondary-button" id="logout-button" type="button">
                     Log out
                 </button>
             </div>
         </header>
 
-        <main>
-            <section class="welcome-section">
+        <main class="dashboard-main">
+            <section class="page-intro">
                 <p class="eyebrow">STUDENT WORKSPACE</p>
                 <h1>Your consultations</h1>
-                <p>Find a time with a teacher or request another time.</p>
+                <p>Find a teacher, view their available times, and book a consultation.</p>
             </section>
 
-            <section class="content-section" aria-labelledby="slots-heading">
-                <div class="section-heading">
+            <div
+                class="dashboard-message"
+                id="student-message"
+                role="status"
+                aria-live="polite"
+                hidden
+            ></div>
+
+            <section class="dashboard-card slots-card" aria-labelledby="slots-title">
+                <div class="card-heading">
                     <div>
                         <p class="eyebrow">BOOK A TIME</p>
-                        <h2 id="slots-heading">Available slots</h2>
+                        <h2 id="slots-title">Find a teacher and book a slot</h2>
+                        <p class="card-description">
+                            Search for a teacher to see and book their available slots.
+                        </p>
                     </div>
 
-                    <button id="refresh-slots-button" class="button button-outline" type="button">
+                    <button
+                        class="secondary-button"
+                        id="refresh-slots"
+                        type="button"
+                    >
                         Refresh
                     </button>
                 </div>
 
-                <p id="slots-status" class="status-message" role="status" aria-live="polite">
-                    Loading available slots...
-                </p>
+                <div class="form-field teacher-search-field">
+                    <label for="teacher-search">Search teacher</label>
+                    <input
+                        id="teacher-search"
+                        type="search"
+                        placeholder="Search by teacher name or department"
+                        autocomplete="off"
+                    >
+                </div>
 
-                <div id="available-slots" class="card-grid"></div>
+                <div class="teacher-results" id="teacher-results">
+                    <p class="empty-state">Loading teachers...</p>
+                </div>
+
+                <div
+                    class="selected-teacher"
+                    id="selected-teacher"
+                    hidden
+                >
+                    <div>
+                        <p class="eyebrow">AVAILABLE TIMES</p>
+                        <h3 id="selected-teacher-name"></h3>
+                    </div>
+
+                    <button
+                        class="secondary-button"
+                        id="change-teacher"
+                        type="button"
+                    >
+                        Choose another teacher
+                    </button>
+                </div>
+
+                <div class="slots-list" id="available-slots" hidden></div>
             </section>
 
-            <section class="content-section" aria-labelledby="request-heading">
-                <div class="section-heading">
+            <section
+                class="dashboard-card request-card"
+                aria-labelledby="request-title"
+            >
+                <div class="card-heading">
                     <div>
                         <p class="eyebrow">NEED ANOTHER TIME?</p>
-                        <h2 id="request-heading">Request a consultation</h2>
+                        <h2 id="request-title">Request a consultation</h2>
+                        <p class="card-description">
+                            Use this form if no available slot works for you.
+                        </p>
                     </div>
                 </div>
 
-                <p class="section-description">
-                    Choose a teacher and send your preferred date and time.
-                </p>
-
-                <form id="request-form" class="request-form">
+                <form id="consultation-request-form" class="request-form">
                     <div class="form-field">
-                        <label for="teacher-select">Teacher</label>
-                        <select id="teacher-select" name="teacher_id" required>
+                        <label for="request-teacher-select">Teacher</label>
+                        <select
+                            id="request-teacher-select"
+                            name="teacher_id"
+                            required
+                        >
                             <option value="">Choose a teacher</option>
                         </select>
                     </div>
 
                     <div class="form-field">
-                        <label for="request-date">Preferred date</label>
-                        <input
-                            id="request-date"
-                            name="date"
-                            type="date"
-                            required
-                        >
+                        <label for="preferred-date-display">
+                            Preferred date (DD/MM/YYYY)
+                        </label>
+
+                        <div class="date-picker-control">
+                            <input
+                                id="preferred-date-display"
+                                type="text"
+                                placeholder="DD/MM/YYYY"
+                                readonly
+                                aria-label="Preferred date in day, month, year format"
+                            >
+
+                            <span class="calendar-icon" aria-hidden="true">▦</span>
+
+                            <input
+                                id="preferred-date"
+                                name="preferred_date"
+                                type="date"
+                                aria-label="Choose preferred date"
+                            >
+                        </div>
                     </div>
 
                     <div class="form-field">
-                        <label for="request-time">Preferred time</label>
+                        <label for="preferred-time">Preferred time</label>
                         <input
-                            id="request-time"
-                            name="time"
+                            id="preferred-time"
+                            name="preferred_time"
                             type="time"
                             required
                         >
                     </div>
 
-                    <div class="form-field form-field-wide">
+                    <div class="form-field message-field">
                         <label for="request-message">Message (optional)</label>
                         <textarea
                             id="request-message"
@@ -101,41 +181,36 @@
                         ></textarea>
                     </div>
 
-                    <div class="form-field-wide">
-                        <button class="button button-primary" type="submit">
-                            Send request
-                        </button>
-                    </div>
+                    <button class="primary-button" type="submit">
+                        Send request
+                    </button>
                 </form>
-
-                <p id="request-status" class="status-message" role="status" aria-live="polite"></p>
             </section>
 
-            <section class="content-section" aria-labelledby="appointments-heading">
-                <div class="section-heading">
+            <section
+                class="dashboard-card appointments-card"
+                aria-labelledby="appointments-title"
+            >
+                <div class="card-heading">
                     <div>
                         <p class="eyebrow">YOUR ACTIVITY</p>
-                        <h2 id="appointments-heading">Appointments and requests</h2>
+                        <h2 id="appointments-title">My consultations</h2>
+                        <p class="card-description">
+                            Check your booked times and request statuses.
+                        </p>
                     </div>
-
-                    <button id="refresh-activity-button" class="button button-outline" type="button">
-                        Refresh
-                    </button>
                 </div>
 
-                <p id="appointments-status" class="status-message" role="status" aria-live="polite">
-                    Loading your activity...
-                </p>
-
-                <div id="appointments-list" class="card-grid"></div>
+                <div class="appointments-list" id="student-appointments">
+                    <p class="empty-state">Loading your consultations...</p>
+                </div>
             </section>
         </main>
 
-        <footer class="footer">
-            CampusConnect · Student workspace
+        <footer class="dashboard-footer">
+            <span>Campus Connect · SWUST</span>
+            <span>Connecting students and teachers</span>
         </footer>
     </div>
-
-    <script type="module" src="js/student.js"></script>
 </body>
 </html>
