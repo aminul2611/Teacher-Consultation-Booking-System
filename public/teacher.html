@@ -25,6 +25,7 @@
                     src="images/campus-logo.png"
                     alt="SWUST logo"
                 >
+
                 <span class="teacher-brand-copy">
                     <span class="teacher-brand-name">Campus Connect</span>
                     <span class="teacher-brand-subtitle">SWUST</span>
@@ -40,6 +41,14 @@
 
                 <span class="teacher-name" id="teacher-name">Teacher</span>
 
+               <button
+                    class="teacher-secondary-button"
+                    id="profile-open-button"
+                    type="button"
+                >
+                    My profile
+                </button>
+
                 <button
                     class="teacher-secondary-button"
                     id="teacher-logout-button"
@@ -47,7 +56,6 @@
                 >
                     Log out
                 </button>
-            </div>
         </header>
 
         <main class="teacher-dashboard-main">
@@ -187,6 +195,40 @@
                 <div class="teacher-requests-list" id="teacher-requests">
                     <p class="teacher-empty-state">
                         Loading student requests...
+                    </p>
+                </div>
+            </section>
+
+            <section
+                class="teacher-dashboard-card"
+                aria-labelledby="completed-consultations-title"
+            >
+                <div class="teacher-card-heading">
+                    <div>
+                        <p class="teacher-eyebrow">CONSULTATION FOLLOW-UP</p>
+                        <h2 id="completed-consultations-title">
+                            Completed consultations
+                        </h2>
+                        <p class="teacher-card-description">
+                            Add guidance and action items after a consultation.
+                        </p>
+                    </div>
+
+                    <button
+                        class="teacher-secondary-button"
+                        id="teacher-refresh-completed"
+                        type="button"
+                    >
+                        Refresh
+                    </button>
+                </div>
+
+                <div
+                    class="teacher-completed-consultations-list"
+                    id="teacher-completed-consultations"
+                >
+                    <p class="teacher-empty-state">
+                        Loading completed consultations...
                     </p>
                 </div>
             </section>

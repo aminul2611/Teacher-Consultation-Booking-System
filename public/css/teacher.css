@@ -671,3 +671,160 @@ a:focus-visible {
         grid-template-columns: 1fr;
     }
 }
+/* Completed consultations and follow-up form */
+
+.teacher-completed-consultations-list {
+    display: grid;
+    gap: 14px;
+}
+
+.teacher-completed-item {
+    min-width: 0;
+    padding: 18px;
+    border: 1px solid #e2eaf4;
+    border-radius: 13px;
+    background: #fbfdff;
+}
+
+.teacher-completed-details {
+    display: grid;
+    gap: 5px;
+}
+
+.teacher-completed-title {
+    margin: 0;
+    color: var(--text);
+    font-size: 15px;
+    line-height: 1.4;
+}
+
+.teacher-completed-meta {
+    margin: 0;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.teacher-followup-preview {
+    margin: 12px 0 0;
+    padding: 11px 13px;
+    border-left: 3px solid var(--blue);
+    border-radius: 7px;
+    background: #f0f6ff;
+    color: #35516e;
+    font-size: 13px;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+}
+
+.teacher-followup-form {
+    margin-top: 16px;
+    padding-top: 15px;
+    display: grid;
+    gap: 12px;
+    border-top: 1px solid var(--line);
+}
+
+.teacher-followup-form label {
+    display: grid;
+    gap: 7px;
+    color: #29445f;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.teacher-followup-form textarea {
+    width: 100%;
+    min-height: 90px;
+    padding: 11px 12px;
+    border: 1px solid #d2deec;
+    border-radius: 9px;
+    outline: none;
+    background: #ffffff;
+    color: var(--text);
+    font: inherit;
+    font-size: 14px;
+    line-height: 1.5;
+    resize: vertical;
+}
+
+.teacher-followup-form textarea::placeholder {
+    color: #91a1b4;
+}
+
+.teacher-followup-form textarea:focus {
+    border-color: #78a9e7;
+    box-shadow: 0 0 0 3px rgb(40 121 212 / 12%);
+}
+
+.teacher-followup-form .teacher-primary-button {
+    width: fit-content;
+    min-width: 150px;
+}
+
+@media (max-width: 600px) {
+    .teacher-completed-item {
+        padding: 15px;
+    }
+
+    .teacher-followup-form .teacher-primary-button {
+        width: 100%;
+    }
+}
+.teacher-proposal-form {
+    width: 100%;
+    margin-top: 12px;
+    padding: 14px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    gap: 12px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: #f8fbff;
+}
+
+.teacher-proposal-field {
+    min-width: 0;
+    display: grid;
+    gap: 7px;
+}
+
+.teacher-proposal-field label {
+    color: #29445f;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.teacher-proposal-field input {
+    width: 100%;
+    min-width: 0;
+    height: 44px;
+    padding: 0 12px;
+    border: 1px solid #d2deec;
+    border-radius: 9px;
+    background: #ffffff;
+    color: var(--text);
+    font: inherit;
+    font-size: 14px;
+}
+
+.teacher-proposal-field input:focus {
+    border-color: #78a9e7;
+    outline: none;
+    box-shadow: 0 0 0 3px rgb(40 121 212 / 12%);
+}
+
+.teacher-proposal-form button {
+    white-space: nowrap;
+}
+
+@media (max-width: 520px) {
+    .teacher-proposal-form {
+        grid-template-columns: 1fr;
+    }
+
+    .teacher-proposal-form button {
+        width: 100%;
+    }
+}

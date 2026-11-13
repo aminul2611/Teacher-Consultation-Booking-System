@@ -9,19 +9,22 @@ from auth import (
     logout_user,
     register_user,
     setup_auth_database,
+    update_profile,
 )
 
 from booking import (
-    get_teacher_slots,
     add_teacher_slot,
     book_slot,
     get_available_slots,
     get_student_appointments,
+    get_teacher_completed_appointments,
     get_teacher_requests,
+    get_teacher_slots,
     get_teachers,
     request_consultation,
     respond_to_proposal,
     respond_to_request,
+    save_consultation_followup,
     setup_booking_database,
 )
 
@@ -67,6 +70,15 @@ def run_rpc_method(method, params):
             password=params.get("password", ""),
         )
 
+    if method == "update_profile":
+        return update_profile(
+            token=params.get("token", ""),
+            full_name=params.get("full_name", ""),
+            phone_number=params.get("phone_number", ""),
+            department=params.get("department", ""),
+            photo_data=params.get("photo_data", ""),
+        )
+
     if method == "get_profile":
         return get_user_from_token(params.get("token", ""))
 
@@ -74,6 +86,7 @@ def run_rpc_method(method, params):
         return logout_user(params.get("token", ""))
 
     token = params.get("token", "")
+
     if method == "get_available_slots":
         return get_available_slots(token)
 
@@ -120,6 +133,17 @@ def run_rpc_method(method, params):
             token=token,
             request_id=params.get("request_id"),
             accept=params.get("accept", False),
+        )
+
+    if method == "get_teacher_completed_appointments":
+        return get_teacher_completed_appointments(token)
+
+    if method == "save_consultation_followup":
+        return save_consultation_followup(
+            token=token,
+            appointment_id=params.get("appointment_id"),
+            summary=params.get("summary", ""),
+            action_items=params.get("action_items", ""),
         )
 
     if method == "get_student_appointments":

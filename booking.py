@@ -101,6 +101,22 @@ def setup_booking_database():
         """)
 
         db.execute("""
+            CREATE TABLE IF NOT EXISTS consultation_followups (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                appointment_id INTEGER NOT NULL UNIQUE,
+                teacher_id TEXT NOT NULL,
+                student_id TEXT NOT NULL,
+                summary TEXT NOT NULL,
+                action_items TEXT NOT NULL DEFAULT '',
+                updated_at INTEGER NOT NULL,
+                FOREIGN KEY (appointment_id)
+                    REFERENCES appointments(id) ON DELETE CASCADE,
+                FOREIGN KEY (teacher_id) REFERENCES users(id),
+                FOREIGN KEY (student_id) REFERENCES users(id)
+            )
+        """)
+
+        db.execute("""
             CREATE INDEX IF NOT EXISTS idx_slots_teacher_time
             ON teacher_slots (teacher_id, starts_at, ends_at)
         """)
@@ -510,6 +526,101 @@ def respond_to_proposal(token, request_id, accept):
     return {"message": "Your response has been saved."}
 
 
+def get_teacher_completed_appointments(token):
+    teacher = require_role(token, "teacher")
+    now_text = _format_time(_now())
+
+    with connect_db() as db:
+        rows = db.execute("""
+            SELECT
+                a.id AS appointment_id,
+                a.starts_at,
+                a.ends_at,
+                u.full_name AS student_name,
+                u.student_id,
+                f.summary,
+                f.action_items
+            FROM appointments AS a
+            JOIN users AS u ON u.id = a.student_id
+            LEFT JOIN consultation_followups AS f
+                ON f.appointment_id = a.id
+            WHERE a.teacher_id = ?
+              AND a.status = 'confirmed'
+              AND a.ends_at <= ?
+            ORDER BY a.starts_at DESC
+        """, (teacher["id"], now_text)).fetchall()
+
+    return [dict(row) for row in rows]
+
+
+def save_consultation_followup(
+    token,
+    appointment_id,
+    summary,
+    action_items="",
+):
+    teacher = require_role(token, "teacher")
+    appointment_id = _positive_id(appointment_id, "appointment")
+    summary = (summary or "").strip()
+    action_items = (action_items or "").strip()
+
+    if not summary:
+        raise ValueError("Enter a consultation summary.")
+
+    if len(summary) > 3000:
+        raise ValueError("The summary must be 3000 characters or fewer.")
+
+    if len(action_items) > 3000:
+        raise ValueError("The action items must be 3000 characters or fewer.")
+
+    now_text = _format_time(_now())
+    updated_at = int(time.time())
+
+    with connect_db() as db:
+        appointment = db.execute("""
+            SELECT id, student_id
+            FROM appointments
+            WHERE id = ?
+              AND teacher_id = ?
+              AND status = 'confirmed'
+              AND ends_at <= ?
+        """, (
+            appointment_id,
+            teacher["id"],
+            now_text,
+        )).fetchone()
+
+        if appointment is None:
+            raise ValueError(
+                "Completed consultation not found for your account."
+            )
+
+        db.execute("""
+            INSERT INTO consultation_followups (
+                appointment_id,
+                teacher_id,
+                student_id,
+                summary,
+                action_items,
+                updated_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(appointment_id) DO UPDATE SET
+                summary = excluded.summary,
+                action_items = excluded.action_items,
+                updated_at = excluded.updated_at
+        """, (
+            appointment_id,
+            teacher["id"],
+            appointment["student_id"],
+            summary,
+            action_items,
+            updated_at,
+        ))
+
+    return {"message": "Consultation follow-up saved."}
+
+
 def get_student_appointments(token):
     student = require_role(token, "student")
 
@@ -520,9 +631,13 @@ def get_student_appointments(token):
                 a.starts_at,
                 a.ends_at,
                 a.status,
-                u.full_name AS teacher_name
+                u.full_name AS teacher_name,
+                f.summary AS followup_summary,
+                f.action_items AS followup_action_items
             FROM appointments AS a
             JOIN users AS u ON u.id = a.teacher_id
+            LEFT JOIN consultation_followups AS f
+                ON f.appointment_id = a.id
             WHERE a.student_id = ?
             ORDER BY a.starts_at
         """, (student["id"],)).fetchall()

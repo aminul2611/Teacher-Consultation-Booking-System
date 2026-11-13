@@ -35,6 +35,7 @@ def setup_auth_database():
                     CHECK (approval_status IN ('pending', 'approved')),
                 student_id TEXT,
                 department TEXT,
+                phone_number TEXT NOT NULL DEFAULT '',
                 photo_path TEXT,
                 password_salt TEXT NOT NULL,
                 password_hash TEXT NOT NULL,
@@ -55,7 +56,13 @@ def setup_auth_database():
                 ADD COLUMN approval_status TEXT NOT NULL DEFAULT 'approved'
             """)
 
-        # আগের pending teacher account-গুলোও active করা হবে।
+        if "phone_number" not in columns:
+            db.execute("""
+                ALTER TABLE users
+                ADD COLUMN phone_number TEXT NOT NULL DEFAULT ''
+            """)
+
+        # Keep teacher accounts active; this project does not use approval.
         db.execute("""
             UPDATE users
             SET approval_status = 'approved'
@@ -98,7 +105,7 @@ def register_user(
     student_id = (student_id or "").strip()
     department = (department or "").strip()
 
-    # server.py compatibility-এর জন্য teacher_code parameter রাখা হয়েছে।
+    # Kept for compatibility with server.py.
     _ = teacher_code
 
     if not email or "@" not in email:
@@ -113,9 +120,7 @@ def register_user(
     if role not in ("student", "teacher"):
         raise ValueError("Role must be student or teacher.")
 
-    # Student এবং teacher—দুই ধরনের account-ই সঙ্গে সঙ্গে active হবে।
     approval_status = "approved"
-
     photo_path = save_profile_photo(photo_data)
 
     user_id = str(uuid.uuid4())
@@ -133,12 +138,13 @@ def register_user(
                     approval_status,
                     student_id,
                     department,
+                    phone_number,
                     photo_path,
                     password_salt,
                     password_hash,
                     created_at
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 user_id,
                 email,
@@ -147,6 +153,7 @@ def register_user(
                 approval_status,
                 student_id,
                 department,
+                "",
                 photo_path,
                 salt.hex(),
                 password_hash.hex(),
@@ -167,6 +174,7 @@ def register_user(
         "approval_status": approval_status,
         "student_id": student_id,
         "department": department,
+        "phone_number": "",
         "photo_path": photo_path,
         "message": "Account created successfully. Please sign in.",
     }
@@ -220,6 +228,7 @@ def login_user(email, password):
             "approval_status": "approved",
             "student_id": user["student_id"],
             "department": user["department"],
+            "phone_number": user["phone_number"],
             "photo_path": user["photo_path"],
         },
     }
@@ -239,6 +248,7 @@ def get_user_from_token(token):
                 users.approval_status,
                 users.student_id,
                 users.department,
+                users.phone_number,
                 users.photo_path
             FROM sessions
             JOIN users ON users.id = sessions.user_id
@@ -252,6 +262,91 @@ def get_user_from_token(token):
     user_data = dict(user)
     user_data["approval_status"] = "approved"
     return user_data
+
+
+def update_profile(
+    token,
+    full_name,
+    phone_number="",
+    department="",
+    photo_data="",
+):
+    user = get_user_from_token(token)
+
+    full_name = (full_name or "").strip()
+    phone_number = (phone_number or "").strip()
+    department = (department or "").strip()
+
+    if not full_name:
+        raise ValueError("Full name is required.")
+
+    if len(full_name) > 120:
+        raise ValueError("Name must be 120 characters or fewer.")
+
+    if len(phone_number) > 30:
+        raise ValueError("Phone number must be 30 characters or fewer.")
+
+    if phone_number:
+        digit_count = sum(character.isdigit() for character in phone_number)
+
+        if not 7 <= digit_count <= 15:
+            raise ValueError(
+                "Enter a phone number with 7 to 15 digits."
+            )
+
+        allowed_phone_characters = set("0123456789+()- .")
+
+        if any(
+            character not in allowed_phone_characters
+            for character in phone_number
+        ):
+            raise ValueError("Enter a valid phone number.")
+
+    if len(department) > 120:
+        raise ValueError("Department must be 120 characters or fewer.")
+
+    new_photo_path = (
+        save_profile_photo(photo_data)
+        if photo_data
+        else None
+    )
+
+    try:
+        with connect_db() as db:
+            current_user = db.execute("""
+                SELECT photo_path
+                FROM users
+                WHERE id = ?
+            """, (user["id"],)).fetchone()
+
+            if current_user is None:
+                raise ValueError("Your account could not be found.")
+
+            old_photo_path = current_user["photo_path"]
+
+            db.execute("""
+                UPDATE users
+                SET
+                    full_name = ?,
+                    phone_number = ?,
+                    department = ?,
+                    photo_path = ?
+                WHERE id = ?
+            """, (
+                full_name,
+                phone_number,
+                department,
+                new_photo_path or old_photo_path,
+                user["id"],
+            ))
+    except Exception:
+        delete_profile_photo(new_photo_path)
+        raise
+
+    if new_photo_path and old_photo_path:
+        delete_profile_photo(old_photo_path)
+
+    return get_user_from_token(token)
 
 
 def require_role(token, required_role):

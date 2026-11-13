@@ -78,6 +78,20 @@ export async function getProfile() {
 }
 
 
+export async function updateProfile(profileDetails) {
+    const token = getSessionToken();
+
+    if (!token) {
+        throw new Error("Please log in first.");
+    }
+
+    return rpcCall("update_profile", {
+        ...profileDetails,
+        token,
+    });
+}
+
+
 export async function logoutUser() {
     const token = getSessionToken();
 
