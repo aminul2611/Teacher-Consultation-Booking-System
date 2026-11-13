@@ -16,7 +16,11 @@
 <body>
     <div class="dashboard-shell">
         <header class="dashboard-header">
-            <a class="brand-lockup" href="index.html" aria-label="Campus Connect home">
+            <a
+                class="brand-lockup"
+                href="index.html"
+                aria-label="Campus Connect home"
+            >
                 <img
                     class="brand-logo"
                     src="images/campus-logo.png"
@@ -29,33 +33,39 @@
             </a>
 
             <div class="account-actions">
-    <div class="student-avatar" id="student-avatar" aria-hidden="true">
-        ST
-                </div>
+                <div
+                    class="student-avatar"
+                    id="student-avatar"
+                    aria-hidden="true"
+                >ST</div>
+
                 <span class="student-name" id="student-name">Student</span>
+
                 <button
-                        class="secondary-button"
-                        id="profile-open-button"
-                        type="button"
-                    >
-                        My profile
-                    </button>
+                    class="secondary-button"
+                    id="profile-open-button"
+                    type="button"
+                >
+                    My profile
+                </button>
 
-                    <button
-                        class="secondary-button"
-                        id="logout-button"
-                        type="button"
-                    >
-                        Log out
-                    </button>
-
+                <button
+                    class="secondary-button"
+                    id="logout-button"
+                    type="button"
+                >
+                    Log out
+                </button>
+            </div>
         </header>
 
         <main class="dashboard-main">
             <section class="page-intro">
                 <p class="eyebrow">STUDENT WORKSPACE</p>
                 <h1>Your consultations</h1>
-                <p>Find a teacher, view their available times, and book a consultation.</p>
+                <p>
+                    Find a teacher, view their available times, and book a consultation.
+                </p>
             </section>
 
             <div
@@ -66,7 +76,10 @@
                 hidden
             ></div>
 
-            <section class="dashboard-card slots-card" aria-labelledby="slots-title">
+            <section
+                class="dashboard-card slots-card"
+                aria-labelledby="slots-title"
+            >
                 <div class="card-heading">
                     <div>
                         <p class="eyebrow">BOOK A TIME</p>
@@ -135,7 +148,10 @@
                     </div>
                 </div>
 
-                <form id="consultation-request-form" class="request-form">
+                <form
+                    id="consultation-request-form"
+                    class="request-form"
+                >
                     <div class="form-field">
                         <label for="request-teacher-select">Teacher</label>
                         <select
@@ -161,12 +177,16 @@
                                 aria-label="Preferred date in day, month, year format"
                             >
 
-                            <span class="calendar-icon" aria-hidden="true">▦</span>
+                            <span
+                                class="calendar-icon"
+                                aria-hidden="true"
+                            >▦</span>
 
                             <input
                                 id="preferred-date"
                                 name="preferred_date"
                                 type="date"
+                                required
                                 aria-label="Choose preferred date"
                             >
                         </div>
@@ -213,8 +233,13 @@
                     </div>
                 </div>
 
-                <div class="appointments-list" id="student-appointments">
-                    <p class="empty-state">Loading your consultations...</p>
+                <div
+                    class="appointments-list"
+                    id="student-appointments"
+                >
+                    <p class="empty-state">
+                        Loading your consultations...
+                    </p>
                 </div>
             </section>
         </main>

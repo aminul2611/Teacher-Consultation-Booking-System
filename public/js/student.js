@@ -4,23 +4,34 @@ import {
     logoutUser,
     rpcCall,
 } from "./rpc.js";
-import { initializeProfileUI } from "./profile-ui.js";
+import "./profile-ui.js";
 
 const studentName = document.getElementById("student-name");
-const profileAvatar = document.getElementById("profile-avatar");
-const slotsStatus = document.getElementById("slots-status");
+const studentAvatar = document.getElementById("student-avatar");
+const globalMessage = document.getElementById("student-message");
+const refreshSlotsButton = document.getElementById("refresh-slots");
+const teacherSearch = document.getElementById("teacher-search");
+const teacherResults = document.getElementById("teacher-results");
+const selectedTeacherPanel = document.getElementById("selected-teacher");
+const selectedTeacherName = document.getElementById("selected-teacher-name");
+const changeTeacherButton = document.getElementById("change-teacher");
 const availableSlots = document.getElementById("available-slots");
-const teacherSelect = document.getElementById("teacher-select");
-const requestForm = document.getElementById("request-form");
-const requestStatus = document.getElementById("request-status");
-const appointmentsStatus = document.getElementById("appointments-status");
-const appointmentsList = document.getElementById("appointments-list");
+const requestForm = document.getElementById("consultation-request-form");
+const requestTeacherSelect = document.getElementById("request-teacher-select");
+const preferredDate = document.getElementById("preferred-date");
+const preferredDateDisplay = document.getElementById("preferred-date-display");
+const preferredTime = document.getElementById("preferred-time");
+const requestMessage = document.getElementById("request-message");
+const appointmentsList = document.getElementById("student-appointments");
 const logoutButton = document.getElementById("logout-button");
 
 const token = getSessionToken();
+let teachers = [];
+let slots = [];
+let selectedTeacher = null;
 
-function showInitials(fullName = "") {
-    return fullName
+function initials(name = "Student") {
+    return String(name)
         .trim()
         .split(/\s+/)
         .slice(0, 2)
@@ -28,46 +39,39 @@ function showInitials(fullName = "") {
         .join("") || "S";
 }
 
-function showProfileAvatar(user) {
-    profileAvatar.replaceChildren();
+function setAvatar(user) {
+    if (!studentAvatar) return;
+
+    studentAvatar.replaceChildren();
 
     if (!user.photo_path) {
-        profileAvatar.textContent = showInitials(user.full_name);
+        studentAvatar.textContent = initials(user.full_name);
         return;
     }
 
     const image = document.createElement("img");
     image.src = user.photo_path;
-    image.alt = `${user.full_name}'s profile picture`;
+    image.alt = `${user.full_name || "Student"}'s profile photo`;
 
     image.addEventListener("error", () => {
-        profileAvatar.replaceChildren();
-        profileAvatar.textContent = showInitials(user.full_name);
+        studentAvatar.replaceChildren();
+        studentAvatar.textContent = initials(user.full_name);
     });
 
-    profileAvatar.append(image);
+    studentAvatar.append(image);
 }
 
-function formatDateTime(value) {
-    if (!value) {
-        return "Time not set";
-    }
+function showMessage(text, type = "") {
+    if (!globalMessage) return;
 
-    const date = new Date(value);
-
-    if (Number.isNaN(date.getTime())) {
-        return value;
-    }
-
-    return new Intl.DateTimeFormat(undefined, {
-        dateStyle: "medium",
-        timeStyle: "short",
-    }).format(date);
+    globalMessage.textContent = text;
+    globalMessage.hidden = !text;
+    globalMessage.className = `dashboard-message ${type}`.trim();
 }
 
-function createTextElement(tagName, text, className = "") {
-    const element = document.createElement(tagName);
-    element.textContent = text;
+function createText(tag, text, className = "") {
+    const element = document.createElement(tag);
+    element.textContent = text ?? "";
 
     if (className) {
         element.className = className;
@@ -77,101 +81,131 @@ function createTextElement(tagName, text, className = "") {
 }
 
 function createButton(
-    label,
+    text,
     onClick,
-    className = "button button-primary"
+    className = "secondary-button"
 ) {
     const button = document.createElement("button");
     button.type = "button";
     button.className = className;
-    button.textContent = label;
+    button.textContent = text;
     button.addEventListener("click", onClick);
 
     return button;
 }
 
-function convertToIsoDateTime(date, time) {
-    const localDateTime = new Date(`${date}T${time}`);
+function formatDateTime(value) {
+    if (!value) return "Time not set";
 
-    if (Number.isNaN(localDateTime.getTime())) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+
+    return new Intl.DateTimeFormat(undefined, {
+        dateStyle: "medium",
+        timeStyle: "short",
+    }).format(date);
+}
+
+function toIsoDateTime(date, time) {
+    if (!date || !time) {
+        throw new Error("Choose both a date and a time.");
+    }
+
+    const localDate = new Date(`${date}T${time}`);
+
+    if (Number.isNaN(localDate.getTime())) {
         throw new Error("Choose a valid date and time.");
     }
 
-    return localDateTime.toISOString();
+    return localDate.toISOString();
 }
 
-async function loadAvailableSlots() {
-    slotsStatus.textContent = "Loading available slots...";
-    availableSlots.replaceChildren();
+function formatInputDate(value) {
+    if (!value) return "";
 
-    try {
-        const slots = await rpcCall("get_available_slots", { token });
+    const [year, month, day] = value.split("-");
+    return `${day}/${month}/${year}`;
+}
 
-        if (!slots.length) {
-            slotsStatus.textContent =
-                "There are no available slots right now.";
-            return;
+function renderTeachers() {
+    const query = teacherSearch.value.trim().toLowerCase();
+
+    const matches = teachers.filter((teacher) =>
+        `${teacher.full_name} ${teacher.department || ""}`
+            .toLowerCase()
+            .includes(query)
+    );
+
+    teacherResults.replaceChildren();
+
+    if (!matches.length) {
+        teacherResults.append(
+            createText(
+                "p",
+                "No teachers match your search.",
+                "empty-state"
+            )
+        );
+        return;
+    }
+
+    matches.forEach((teacher) => {
+        const card = document.createElement("article");
+        card.className = "teacher-card";
+
+        const details = document.createElement("div");
+        details.className = "teacher-card-main";
+        details.append(
+            createText(
+                "h3",
+                teacher.full_name,
+                "teacher-card-name"
+            ),
+            createText(
+                "p",
+                teacher.department || "Department not listed",
+                "teacher-card-meta"
+            )
+        );
+
+        if (teacher.photo_path) {
+            const image = document.createElement("img");
+            image.className = "teacher-profile-avatar";
+            image.src = teacher.photo_path;
+            image.alt = `${teacher.full_name}'s profile photo`;
+            image.addEventListener("error", () => image.remove());
+            card.append(image);
         }
 
-        slotsStatus.textContent = `${slots.length} available slot(s).`;
-
-        slots.forEach((slot) => {
-            const card = document.createElement("article");
-            card.className = "data-card";
-
-            card.append(
-                createTextElement("h3", slot.teacher_name),
-                createTextElement(
-                    "p",
-                    `Starts: ${formatDateTime(slot.starts_at)}`
-                ),
-                createTextElement(
-                    "p",
-                    `Ends: ${formatDateTime(slot.ends_at)}`
-                )
-            );
-
-            const bookButton = createButton(
-                "Book this slot",
+        card.append(
+            details,
+            createButton(
+                "View available slots",
                 async () => {
-                    bookButton.disabled = true;
-                    bookButton.textContent = "Booking...";
+                    await selectTeacher(teacher);
+                },
+                "secondary-button select-teacher-button"
+            )
+        );
 
-                    try {
-                        const result = await rpcCall("book_slot", {
-                            token,
-                            slot_id: slot.id,
-                        });
-
-                        slotsStatus.textContent = result.message;
-                        await refreshStudentData();
-                    } catch (error) {
-                        slotsStatus.textContent = error.message;
-                        bookButton.disabled = false;
-                        bookButton.textContent = "Book this slot";
-                    }
-                }
-            );
-
-            card.append(bookButton);
-            availableSlots.append(card);
-        });
-    } catch (error) {
-        slotsStatus.textContent =
-            `Could not load available slots: ${error.message}`;
-    }
+        teacherResults.append(card);
+    });
 }
 
 async function loadTeachers() {
-    teacherSelect.replaceChildren();
-
-    const firstOption = document.createElement("option");
-    firstOption.value = "";
-    firstOption.textContent = "Choose a teacher";
-    teacherSelect.append(firstOption);
+    teacherResults.replaceChildren(
+        createText("p", "Loading teachers...", "empty-state")
+    );
 
     try {
-        const teachers = await rpcCall("get_teachers", { token });
+        teachers = await rpcCall("get_teachers", { token });
+
+        requestTeacherSelect.replaceChildren();
+
+        const prompt = document.createElement("option");
+        prompt.value = "";
+        prompt.textContent = "Choose a teacher";
+        requestTeacherSelect.append(prompt);
 
         teachers.forEach((teacher) => {
             const option = document.createElement("option");
@@ -180,119 +214,288 @@ async function loadTeachers() {
                 ? `${teacher.full_name} — ${teacher.department}`
                 : teacher.full_name;
 
-            teacherSelect.append(option);
+            requestTeacherSelect.append(option);
         });
+
+        renderTeachers();
     } catch (error) {
-        requestStatus.textContent =
-            `Could not load teachers: ${error.message}`;
+        teacherResults.replaceChildren(
+            createText(
+                "p",
+                `Could not load teachers: ${error.message}`,
+                "empty-state"
+            )
+        );
     }
 }
 
-async function loadAppointmentsAndRequests() {
-    appointmentsStatus.textContent =
-        "Loading your appointments and requests...";
-    appointmentsList.replaceChildren();
+async function loadAvailableSlots() {
+    availableSlots.replaceChildren(
+        createText(
+            "p",
+            "Loading available slots...",
+            "empty-state"
+        )
+    );
 
     try {
-        const data = await rpcCall("get_student_appointments", { token });
+        slots = await rpcCall("get_available_slots", { token });
+
+        if (selectedTeacher) {
+            renderSelectedTeacherSlots();
+        }
+    } catch (error) {
+        availableSlots.replaceChildren(
+            createText(
+                "p",
+                `Could not load slots: ${error.message}`,
+                "empty-state"
+            )
+        );
+    }
+}
+
+async function selectTeacher(teacher) {
+    selectedTeacher = teacher;
+    selectedTeacherName.textContent = teacher.full_name;
+    selectedTeacherPanel.hidden = false;
+    availableSlots.hidden = false;
+    showMessage("");
+
+    if (!slots.length) {
+        await loadAvailableSlots();
+    } else {
+        renderSelectedTeacherSlots();
+    }
+
+    selectedTeacherPanel.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+    });
+}
+
+function renderSelectedTeacherSlots() {
+    availableSlots.replaceChildren();
+
+    const teacherSlots = slots.filter(
+        (slot) => slot.teacher_id === selectedTeacher.id
+    );
+
+    if (!teacherSlots.length) {
+        availableSlots.append(
+            createText(
+                "p",
+                "This teacher has no available slots right now.",
+                "empty-state"
+            )
+        );
+        return;
+    }
+
+    teacherSlots.forEach((slot) => {
+        const card = document.createElement("article");
+        card.className = "slot-item";
+
+        const details = document.createElement("div");
+        details.className = "slot-details";
+        details.append(
+            createText(
+                "p",
+                formatDateTime(slot.starts_at),
+                "slot-title"
+            ),
+            createText(
+                "p",
+                `Until ${formatDateTime(slot.ends_at)}`,
+                "slot-meta"
+            )
+        );
+
+        card.append(
+            details,
+            createButton(
+                "Book this slot",
+                async (event) => {
+                    const button = event.currentTarget;
+                    button.disabled = true;
+                    button.textContent = "Booking...";
+
+                    try {
+                        const result = await rpcCall("book_slot", {
+                            token,
+                            slot_id: slot.id,
+                        });
+
+                        showMessage(result.message, "success");
+
+                        await Promise.all([
+                            loadAvailableSlots(),
+                            loadAppointments(),
+                        ]);
+                    } catch (error) {
+                        showMessage(error.message, "error");
+                        button.disabled = false;
+                        button.textContent = "Book this slot";
+                    }
+                },
+                "primary-button book-slot-button"
+            )
+        );
+
+        availableSlots.append(card);
+    });
+}
+
+async function loadAppointments() {
+    appointmentsList.replaceChildren(
+        createText(
+            "p",
+            "Loading your consultations...",
+            "empty-state"
+        )
+    );
+
+    try {
+        const data = await rpcCall(
+            "get_student_appointments",
+            { token }
+        );
+
         const appointments = data.appointments || [];
         const requests = data.requests || [];
 
-        if (appointments.length === 0 && requests.length === 0) {
-            appointmentsStatus.textContent =
-                "You do not have any appointments or requests yet.";
+        appointmentsList.replaceChildren();
+
+        if (!appointments.length && !requests.length) {
+            appointmentsList.append(
+                createText(
+                    "p",
+                    "You have no consultations or requests yet.",
+                    "empty-state"
+                )
+            );
             return;
         }
 
-        appointmentsStatus.textContent = "";
+        appointments.forEach((appointment) => {
+            const card = document.createElement("article");
+            card.className = "appointment-item";
 
-        if (appointments.length > 0) {
-            appointmentsList.append(
-                createTextElement("h3", "Appointments", "section-title")
+            const details = document.createElement("div");
+            details.className = "appointment-details";
+            details.append(
+                createText(
+                    "h3",
+                    appointment.teacher_name,
+                    "appointment-title"
+                ),
+                createText(
+                    "p",
+                    `${formatDateTime(appointment.starts_at)} – ${formatDateTime(appointment.ends_at)}`,
+                    "appointment-meta"
+                ),
+                createText(
+                    "p",
+                    `Status: ${appointment.status}`,
+                    "appointment-meta"
+                )
             );
 
-            appointments.forEach((appointment) => {
-                const card = document.createElement("article");
-                card.className = "data-card";
+            if (appointment.followup_summary) {
+                details.append(
+                    createText("h4", "Teacher's follow-up"),
+                    createText("p", appointment.followup_summary)
+                );
+            }
 
-                card.append(
-                    createTextElement("h4", appointment.teacher_name),
-                    createTextElement(
+            if (appointment.followup_action_items) {
+                details.append(
+                    createText(
                         "p",
-                        `Starts: ${formatDateTime(appointment.starts_at)}`
-                    ),
-                    createTextElement(
+                        `Action items: ${appointment.followup_action_items}`
+                    )
+                );
+            }
+
+            card.append(details);
+            appointmentsList.append(card);
+        });
+
+        requests.forEach((request) => {
+            const card = document.createElement("article");
+            card.className = "appointment-item";
+
+            const details = document.createElement("div");
+            details.className = "appointment-details";
+            details.append(
+                createText(
+                    "h3",
+                    request.teacher_name,
+                    "appointment-title"
+                ),
+                createText(
+                    "p",
+                    `Requested time: ${formatDateTime(request.preferred_start)}`,
+                    "appointment-meta"
+                ),
+                createText(
+                    "p",
+                    `Status: ${request.status}`,
+                    "appointment-meta"
+                )
+            );
+
+            if (request.message) {
+                details.append(
+                    createText(
                         "p",
-                        `Ends: ${formatDateTime(appointment.ends_at)}`
-                    ),
-                    createTextElement(
+                        `Message: ${request.message}`,
+                        "appointment-meta"
+                    )
+                );
+            }
+
+            if (request.status === "proposed" && request.proposed_start) {
+                details.append(
+                    createText(
                         "p",
-                        `Status: ${appointment.status}`
+                        `Teacher proposed: ${formatDateTime(request.proposed_start)}`,
+                        "appointment-meta"
                     )
                 );
 
-                appointmentsList.append(card);
-            });
-        }
-
-        if (requests.length > 0) {
-            appointmentsList.append(
-                createTextElement("h3", "Time requests", "section-title")
-            );
-
-            requests.forEach((request) => {
-                const card = document.createElement("article");
-                card.className = "data-card";
-
                 card.append(
-                    createTextElement("h4", request.teacher_name),
-                    createTextElement(
-                        "p",
-                        `Preferred time: ${formatDateTime(request.preferred_start)}`
+                    createButton(
+                        "Accept proposal",
+                        async () => {
+                            await answerProposal(request.id, true);
+                        },
+                        "primary-button"
                     ),
-                    createTextElement("p", `Status: ${request.status}`)
+                    createButton(
+                        "Decline proposal",
+                        async () => {
+                            await answerProposal(request.id, false);
+                        }
+                    )
                 );
+            }
 
-                if (request.message) {
-                    card.append(
-                        createTextElement("p", `Message: ${request.message}`)
-                    );
-                }
-
-                if (request.proposed_start) {
-                    card.append(
-                        createTextElement(
-                            "p",
-                            `Teacher proposed: ${formatDateTime(request.proposed_start)}`
-                        ),
-                        createButton(
-                            "Accept proposed time",
-                            async () => {
-                                await respondToProposal(request.id, true);
-                            }
-                        ),
-                        createButton(
-                            "Decline proposed time",
-                            async () => {
-                                await respondToProposal(request.id, false);
-                            },
-                            "button button-outline"
-                        )
-                    );
-                }
-
-                appointmentsList.append(card);
-            });
-        }
+            card.append(details);
+            appointmentsList.append(card);
+        });
     } catch (error) {
-        appointmentsStatus.textContent =
-            `Could not load your activity: ${error.message}`;
+        appointmentsList.replaceChildren(
+            createText(
+                "p",
+                `Could not load consultations: ${error.message}`,
+                "empty-state"
+            )
+        );
     }
 }
 
-async function respondToProposal(requestId, accept) {
-    appointmentsStatus.textContent = "Saving your response...";
-
+async function answerProposal(requestId, accept) {
     try {
         const result = await rpcCall("respond_to_proposal", {
             token,
@@ -300,56 +503,60 @@ async function respondToProposal(requestId, accept) {
             accept,
         });
 
-        appointmentsStatus.textContent = result.message;
-        await loadAppointmentsAndRequests();
+        showMessage(result.message, "success");
+        await loadAppointments();
     } catch (error) {
-        appointmentsStatus.textContent = error.message;
+        showMessage(error.message, "error");
     }
-}
-
-async function refreshStudentData() {
-    await Promise.all([
-        loadAvailableSlots(),
-        loadAppointmentsAndRequests(),
-    ]);
 }
 
 requestForm.addEventListener("submit", async (event) => {
     event.preventDefault();
-
-    requestStatus.textContent = "Sending your request...";
-
-    const formData = new FormData(requestForm);
-    const teacherId = formData.get("teacher_id");
-    const date = formData.get("date");
-    const time = formData.get("time");
-    const message = String(formData.get("message") || "").trim();
+    showMessage("Sending your request...");
 
     try {
-        const preferredStart = convertToIsoDateTime(date, time);
+        const preferredStart = toIsoDateTime(
+            preferredDate.value,
+            preferredTime.value
+        );
 
         const result = await rpcCall("request_consultation", {
             token,
-            teacher_id: teacherId,
+            teacher_id: requestTeacherSelect.value,
             preferred_start: preferredStart,
-            message,
+            message: requestMessage.value.trim(),
         });
 
-        requestStatus.textContent = result.message;
+        showMessage(result.message, "success");
         requestForm.reset();
-        await loadAppointmentsAndRequests();
+        preferredDateDisplay.value = "";
+
+        await loadAppointments();
     } catch (error) {
-        requestStatus.textContent = error.message;
+        showMessage(error.message, "error");
     }
 });
 
-document
-    .getElementById("refresh-slots-button")
-    .addEventListener("click", loadAvailableSlots);
+preferredDate.min = new Date().toISOString().slice(0, 10);
 
-document
-    .getElementById("refresh-activity-button")
-    .addEventListener("click", loadAppointmentsAndRequests);
+preferredDate.addEventListener("change", () => {
+    preferredDateDisplay.value =
+        formatInputDate(preferredDate.value);
+});
+
+teacherSearch.addEventListener("input", renderTeachers);
+
+refreshSlotsButton.addEventListener("click", async () => {
+    await loadAvailableSlots();
+    showMessage("Available slots refreshed.", "success");
+});
+
+changeTeacherButton.addEventListener("click", () => {
+    selectedTeacher = null;
+    selectedTeacherPanel.hidden = true;
+    availableSlots.hidden = true;
+    availableSlots.replaceChildren();
+});
 
 logoutButton.addEventListener("click", async () => {
     logoutButton.disabled = true;
@@ -381,20 +588,11 @@ async function startStudentPage() {
         }
 
         studentName.textContent = user.full_name || "Student";
-        showProfileAvatar(user);
-
-        initializeProfileUI({
-            profile: user,
-            onProfileUpdated: (updatedProfile) => {
-                studentName.textContent =
-                    updatedProfile.full_name || "Student";
-                showProfileAvatar(updatedProfile);
-            },
-        });
+        setAvatar(user);
 
         await Promise.all([
             loadTeachers(),
-            refreshStudentData(),
+            loadAppointments(),
         ]);
     } catch (error) {
         console.error("Could not start student page:", error);
