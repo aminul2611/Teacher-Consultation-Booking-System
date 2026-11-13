@@ -828,3 +828,38 @@ a:focus-visible {
         width: 100%;
     }
 }
+.teacher-proposal-date-control {
+    position: relative;
+}
+
+.teacher-proposal-date-control .teacher-proposal-date-display {
+    padding-right: 48px;
+    cursor: pointer;
+}
+
+.teacher-proposal-date-control input[type="date"] {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 46px;
+    height: 44px;
+    padding: 0;
+    border: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+.teacher-date-picker-control input[type="date"] {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    opacity: 0;
+    cursor: pointer;
+    z-index: 2;
+}
+
+.teacher-date-picker-control .teacher-calendar-icon {
+    pointer-events: none;
+}

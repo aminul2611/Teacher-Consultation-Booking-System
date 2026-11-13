@@ -23,6 +23,27 @@ const logoutButton = document.getElementById("teacher-logout-button");
 
 const token = getSessionToken();
 
+function openDatePicker(input) {
+    try {
+        if (typeof input.showPicker === "function") {
+            input.showPicker();
+        } else {
+            input.click();
+        }
+    } catch {
+        input.click();
+    }
+}
+
+function localToday() {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const day = String(today.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+}
+
 function initials(name = "Teacher") {
     return String(name)
         .trim()
@@ -92,10 +113,18 @@ function formatDateTime(value) {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return value;
 
-    return new Intl.DateTimeFormat(undefined, {
-        dateStyle: "medium",
-        timeStyle: "short",
+    const dateText = new Intl.DateTimeFormat("en-GB", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
     }).format(date);
+
+    const timeText = new Intl.DateTimeFormat(undefined, {
+        hour: "2-digit",
+        minute: "2-digit",
+    }).format(date);
+
+    return `${dateText} ${timeText}`;
 }
 
 function localIso(dateValue, timeValue) {
@@ -193,25 +222,66 @@ function makeProposalForm(requestId) {
     const field = document.createElement("div");
     field.className = "teacher-proposal-field";
 
-    const label = document.createElement("label");
-    label.textContent = "Suggest another date and time";
+    const dateLabel = document.createElement("label");
+    dateLabel.textContent = "Suggested date (DD/MM/YYYY)";
 
-    const input = document.createElement("input");
-    input.type = "datetime-local";
-    input.required = true;
+    const dateControl = document.createElement("div");
+    dateControl.className = "teacher-proposal-date-control";
+
+    const dateDisplay = document.createElement("input");
+    dateDisplay.type = "text";
+    dateDisplay.className = "teacher-proposal-date-display";
+    dateDisplay.placeholder = "DD/MM/YYYY";
+    dateDisplay.readOnly = true;
+
+    const calendarIcon = document.createElement("span");
+    calendarIcon.className = "teacher-calendar-icon";
+    calendarIcon.setAttribute("aria-hidden", "true");
+    calendarIcon.textContent = "▦";
+
+    const dateInput = document.createElement("input");
+    dateInput.type = "date";
+    dateInput.required = true;
+    dateInput.min = localToday();
+    dateInput.setAttribute("aria-label", "Choose proposed date");
+
+    dateInput.addEventListener("change", () => {
+        if (!dateInput.value) {
+            dateDisplay.value = "";
+            return;
+        }
+
+        const [year, month, day] = dateInput.value.split("-");
+        dateDisplay.value = `${day}/${month}/${year}`;
+    });
+
+    dateDisplay.addEventListener("click", () => {
+        openDatePicker(dateInput);
+    });
+
+    dateControl.append(dateDisplay, calendarIcon, dateInput);
+
+    const timeLabel = document.createElement("label");
+    timeLabel.textContent = "Suggested time";
+
+    const timeInput = document.createElement("input");
+    timeInput.type = "time";
+    timeInput.required = true;
 
     const submit = document.createElement("button");
     submit.type = "submit";
     submit.className = "teacher-primary-button";
     submit.textContent = "Send proposal";
 
-    field.append(label, input);
+    field.append(dateLabel, dateControl, timeLabel, timeInput);
     form.append(field, submit);
 
     form.addEventListener("submit", async (event) => {
         event.preventDefault();
 
-        const proposed = new Date(input.value);
+        const proposed = new Date(
+            `${dateInput.value}T${timeInput.value}`
+        );
 
         if (Number.isNaN(proposed.getTime())) {
             showMessage(
@@ -517,9 +587,14 @@ slotForm.addEventListener("submit", async (event) => {
     }
 });
 
-startDate.min = new Date().toISOString().slice(0, 10);
+startDate.min = localToday();
+
 startDate.addEventListener("change", () => {
     displayDate(startDate.value);
+});
+
+startDateDisplay.addEventListener("click", () => {
+    openDatePicker(startDate);
 });
 
 document
