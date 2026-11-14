@@ -13,12 +13,10 @@ def _parse_time(value):
     except ValueError:
         raise ValueError(
             "Use an ISO date-time, for example 2026-11-20T09:30:00Z."
-        )
+        ) from None
 
-    # If no timezone is supplied, interpret the time in the server's local zone.
     if parsed.tzinfo is None:
         parsed = parsed.astimezone()
-
     return parsed.astimezone(timezone.utc)
 
 
@@ -39,11 +37,10 @@ def _positive_id(value, label):
     try:
         number = int(value)
     except (TypeError, ValueError):
-        raise ValueError(f"Invalid {label}.")
+        raise ValueError(f"Invalid {label}.") from None
 
     if number <= 0:
         raise ValueError(f"Invalid {label}.")
-
     return number
 
 
@@ -61,7 +58,6 @@ def setup_booking_database():
                 FOREIGN KEY (booked_by_student) REFERENCES users(id)
             )
         """)
-
         db.execute("""
             CREATE TABLE IF NOT EXISTS consultation_requests (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -70,16 +66,13 @@ def setup_booking_database():
                 preferred_start TEXT NOT NULL,
                 message TEXT NOT NULL DEFAULT '',
                 status TEXT NOT NULL DEFAULT 'pending'
-                    CHECK (status IN (
-                        'pending', 'proposed', 'accepted', 'declined'
-                    )),
+                    CHECK (status IN ('pending', 'proposed', 'accepted', 'declined')),
                 proposed_start TEXT,
                 created_at INTEGER NOT NULL,
                 FOREIGN KEY (student_id) REFERENCES users(id),
                 FOREIGN KEY (teacher_id) REFERENCES users(id)
             )
         """)
-
         db.execute("""
             CREATE TABLE IF NOT EXISTS appointments (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -95,11 +88,9 @@ def setup_booking_database():
                 FOREIGN KEY (teacher_id) REFERENCES users(id),
                 FOREIGN KEY (student_id) REFERENCES users(id),
                 FOREIGN KEY (slot_id) REFERENCES teacher_slots(id),
-                FOREIGN KEY (request_id)
-                    REFERENCES consultation_requests(id)
+                FOREIGN KEY (request_id) REFERENCES consultation_requests(id)
             )
         """)
-
         db.execute("""
             CREATE TABLE IF NOT EXISTS consultation_followups (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -109,23 +100,19 @@ def setup_booking_database():
                 summary TEXT NOT NULL,
                 action_items TEXT NOT NULL DEFAULT '',
                 updated_at INTEGER NOT NULL,
-                FOREIGN KEY (appointment_id)
-                    REFERENCES appointments(id) ON DELETE CASCADE,
+                FOREIGN KEY (appointment_id) REFERENCES appointments(id) ON DELETE CASCADE,
                 FOREIGN KEY (teacher_id) REFERENCES users(id),
                 FOREIGN KEY (student_id) REFERENCES users(id)
             )
         """)
-
         db.execute("""
             CREATE INDEX IF NOT EXISTS idx_slots_teacher_time
             ON teacher_slots (teacher_id, starts_at, ends_at)
         """)
-
         db.execute("""
             CREATE INDEX IF NOT EXISTS idx_requests_teacher_status
             ON consultation_requests (teacher_id, status)
         """)
-
         db.execute("""
             CREATE INDEX IF NOT EXISTS idx_appointments_teacher_time
             ON appointments (teacher_id, starts_at, ends_at)
@@ -134,7 +121,6 @@ def setup_booking_database():
 
 def get_teachers(token):
     require_role(token, "student")
-
     with connect_db() as db:
         rows = db.execute("""
             SELECT id, full_name, department, photo_path
@@ -142,7 +128,6 @@ def get_teachers(token):
             WHERE role = 'teacher'
             ORDER BY full_name
         """).fetchall()
-
     return [dict(row) for row in rows]
 
 
@@ -152,12 +137,8 @@ def get_available_slots(token):
 
     with connect_db() as db:
         rows = db.execute("""
-            SELECT
-                s.id,
-                s.teacher_id,
-                u.full_name AS teacher_name,
-                s.starts_at,
-                s.ends_at
+            SELECT s.id, s.teacher_id, u.full_name AS teacher_name,
+                   s.starts_at, s.ends_at
             FROM teacher_slots AS s
             JOIN users AS u ON u.id = s.teacher_id
             WHERE s.booked_by_student IS NULL
@@ -173,7 +154,6 @@ def get_available_slots(token):
               )
             ORDER BY s.starts_at
         """, (now_text,)).fetchall()
-
     return [dict(row) for row in rows]
 
 
@@ -190,22 +170,17 @@ def add_teacher_slot(token, starts_at, ends_at):
     end_text = _format_time(end)
 
     with connect_db() as db:
+        db.execute("BEGIN IMMEDIATE")
         slot_overlap = db.execute("""
-            SELECT 1
-            FROM teacher_slots
-            WHERE teacher_id = ?
-              AND starts_at < ?
-              AND ends_at > ?
+            SELECT 1 FROM teacher_slots
+            WHERE teacher_id = ? AND starts_at < ? AND ends_at > ?
             LIMIT 1
         """, (teacher["id"], end_text, start_text)).fetchone()
 
         appointment_overlap = db.execute("""
-            SELECT 1
-            FROM appointments
-            WHERE teacher_id = ?
-              AND status = 'confirmed'
-              AND starts_at < ?
-              AND ends_at > ?
+            SELECT 1 FROM appointments
+            WHERE teacher_id = ? AND status = 'confirmed'
+              AND starts_at < ? AND ends_at > ?
             LIMIT 1
         """, (teacher["id"], end_text, start_text)).fetchone()
 
@@ -213,16 +188,9 @@ def add_teacher_slot(token, starts_at, ends_at):
             raise ValueError("This time overlaps another slot or appointment.")
 
         db.execute("""
-            INSERT INTO teacher_slots (
-                teacher_id, starts_at, ends_at, created_at
-            )
+            INSERT INTO teacher_slots (teacher_id, starts_at, ends_at, created_at)
             VALUES (?, ?, ?, ?)
-        """, (
-            teacher["id"],
-            start_text,
-            end_text,
-            int(time.time()),
-        ))
+        """, (teacher["id"], start_text, end_text, int(time.time())))
 
     return {"message": "Available slot added."}
 
@@ -232,29 +200,57 @@ def get_teacher_slots(token):
 
     with connect_db() as db:
         rows = db.execute("""
-            SELECT
-                s.id,
-                s.starts_at,
-                s.ends_at,
-                s.booked_by_student,
-                u.full_name AS student_name
+            SELECT s.id, s.starts_at, s.ends_at, s.booked_by_student,
+                   u.full_name AS student_name
             FROM teacher_slots AS s
-            LEFT JOIN users AS u
-                ON u.id = s.booked_by_student
+            LEFT JOIN users AS u ON u.id = s.booked_by_student
             WHERE s.teacher_id = ?
             ORDER BY s.starts_at DESC
         """, (teacher["id"],)).fetchall()
 
     slots = []
-
     for row in rows:
         slot = dict(row)
-        slot["status"] = (
-            "booked" if slot["booked_by_student"] else "available"
-        )
+        slot["status"] = "booked" if slot["booked_by_student"] else "available"
         slots.append(slot)
-
     return slots
+
+
+def get_teacher_schedule(token):
+    teacher = require_role(token, "teacher")
+    now_text = _format_time(_now())
+
+    with connect_db() as db:
+        rows = db.execute("""
+            SELECT a.starts_at, a.ends_at, 'booked' AS status,
+                   u.full_name AS student_name, r.message AS topic
+            FROM appointments AS a
+            JOIN users AS u ON u.id = a.student_id
+            LEFT JOIN consultation_requests AS r ON r.id = a.request_id
+            WHERE a.teacher_id = ?
+              AND a.status = 'confirmed'
+              AND a.ends_at > ?
+
+            UNION ALL
+
+            SELECT s.starts_at, s.ends_at, 'available' AS status,
+                   NULL AS student_name, NULL AS topic
+            FROM teacher_slots AS s
+            WHERE s.teacher_id = ?
+              AND s.starts_at > ?
+              AND s.booked_by_student IS NULL
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM appointments AS a
+                  WHERE a.teacher_id = s.teacher_id
+                    AND a.status = 'confirmed'
+                    AND a.starts_at < s.ends_at
+                    AND a.ends_at > s.starts_at
+              )
+            ORDER BY starts_at, ends_at
+        """, (teacher["id"], now_text, teacher["id"], now_text)).fetchall()
+
+    return [dict(row) for row in rows]
 
 
 def book_slot(token, slot_id):
@@ -263,37 +259,28 @@ def book_slot(token, slot_id):
 
     with connect_db() as db:
         db.execute("BEGIN IMMEDIATE")
-
-        slot = db.execute("""
-            SELECT *
-            FROM teacher_slots
-            WHERE id = ?
-        """, (slot_id,)).fetchone()
+        slot = db.execute(
+            "SELECT * FROM teacher_slots WHERE id = ?", (slot_id,)
+        ).fetchone()
 
         if slot is None:
             raise ValueError("This slot does not exist.")
-
         if slot["booked_by_student"] is not None:
             raise ValueError("This slot has already been booked.")
 
         start = _parse_time(slot["starts_at"])
         end = _parse_time(slot["ends_at"])
         _check_future(start)
+        start_text = _format_time(start)
+        end_text = _format_time(end)
 
         conflict = db.execute("""
-            SELECT 1
-            FROM appointments
+            SELECT 1 FROM appointments
             WHERE status = 'confirmed'
               AND (teacher_id = ? OR student_id = ?)
-              AND starts_at < ?
-              AND ends_at > ?
+              AND starts_at < ? AND ends_at > ?
             LIMIT 1
-        """, (
-            slot["teacher_id"],
-            student["id"],
-            _format_time(end),
-            _format_time(start),
-        )).fetchone()
+        """, (slot["teacher_id"], student["id"], end_text, start_text)).fetchone()
 
         if conflict:
             raise ValueError(
@@ -305,23 +292,17 @@ def book_slot(token, slot_id):
             SET booked_by_student = ?
             WHERE id = ? AND booked_by_student IS NULL
         """, (student["id"], slot_id))
-
         if updated.rowcount != 1:
             raise ValueError("This slot was just booked by someone else.")
 
         db.execute("""
             INSERT INTO appointments (
-                teacher_id, student_id, starts_at, ends_at,
-                slot_id, created_at
+                teacher_id, student_id, starts_at, ends_at, slot_id, created_at
             )
             VALUES (?, ?, ?, ?, ?, ?)
         """, (
-            slot["teacher_id"],
-            student["id"],
-            _format_time(start),
-            _format_time(end),
-            slot_id,
-            int(time.time()),
+            slot["teacher_id"], student["id"], start_text,
+            end_text, slot_id, int(time.time()),
         ))
 
     return {"message": "Slot booked successfully."}
@@ -337,26 +318,19 @@ def request_consultation(token, teacher_id, preferred_start, message=""):
 
     with connect_db() as db:
         teacher = db.execute("""
-            SELECT id
-            FROM users
-            WHERE id = ? AND role = 'teacher'
+            SELECT id FROM users WHERE id = ? AND role = 'teacher'
         """, (teacher_id,)).fetchone()
-
         if teacher is None:
             raise ValueError("Choose a valid teacher.")
 
         db.execute("""
             INSERT INTO consultation_requests (
-                student_id, teacher_id, preferred_start,
-                message, created_at
+                student_id, teacher_id, preferred_start, message, created_at
             )
             VALUES (?, ?, ?, ?, ?)
         """, (
-            student["id"],
-            teacher_id,
-            _format_time(start),
-            message.strip(),
-            int(time.time()),
+            student["id"], teacher_id, _format_time(start),
+            message.strip(), int(time.time()),
         ))
 
     return {"message": "Your time request has been sent."}
@@ -367,15 +341,8 @@ def get_teacher_requests(token):
 
     with connect_db() as db:
         rows = db.execute("""
-            SELECT
-                r.id,
-                r.preferred_start,
-                r.message,
-                r.status,
-                r.proposed_start,
-                r.created_at,
-                u.full_name AS student_name,
-                u.student_id
+            SELECT r.id, r.preferred_start, r.message, r.status, r.proposed_start,
+                   r.created_at, u.full_name AS student_name, u.student_id
             FROM consultation_requests AS r
             JOIN users AS u ON u.id = r.student_id
             WHERE r.teacher_id = ?
@@ -391,15 +358,12 @@ def _create_appointment(db, teacher_id, student_id, start, request_id=None):
     end_text = _format_time(end)
 
     conflict = db.execute("""
-        SELECT 1
-        FROM appointments
+        SELECT 1 FROM appointments
         WHERE status = 'confirmed'
           AND (teacher_id = ? OR student_id = ?)
-          AND starts_at < ?
-          AND ends_at > ?
+          AND starts_at < ? AND ends_at > ?
         LIMIT 1
     """, (teacher_id, student_id, end_text, start_text)).fetchone()
-
     if conflict:
         raise ValueError(
             "You or the teacher already has an appointment at this time."
@@ -407,18 +371,10 @@ def _create_appointment(db, teacher_id, student_id, start, request_id=None):
 
     db.execute("""
         INSERT INTO appointments (
-            teacher_id, student_id, starts_at, ends_at,
-            request_id, created_at
+            teacher_id, student_id, starts_at, ends_at, request_id, created_at
         )
         VALUES (?, ?, ?, ?, ?, ?)
-    """, (
-        teacher_id,
-        student_id,
-        start_text,
-        end_text,
-        request_id,
-        int(time.time()),
-    ))
+    """, (teacher_id, student_id, start_text, end_text, request_id, int(time.time())))
 
 
 def respond_to_request(token, request_id, action, proposed_start=""):
@@ -431,53 +387,36 @@ def respond_to_request(token, request_id, action, proposed_start=""):
 
     with connect_db() as db:
         db.execute("BEGIN IMMEDIATE")
-
         request = db.execute("""
-            SELECT *
-            FROM consultation_requests
-            WHERE id = ? AND teacher_id = ?
+            SELECT * FROM consultation_requests WHERE id = ? AND teacher_id = ?
         """, (request_id, teacher["id"])).fetchone()
 
         if request is None:
             raise ValueError("Request not found.")
-
         if request["status"] != "pending":
             raise ValueError("This request has already been answered.")
 
         if action == "accept":
             start = _parse_time(request["preferred_start"])
             _check_future(start)
-
             _create_appointment(
-                db,
-                teacher["id"],
-                request["student_id"],
-                start,
-                request_id=request["id"],
+                db, teacher["id"], request["student_id"], start, request_id=request_id
             )
-
             db.execute("""
-                UPDATE consultation_requests
-                SET status = 'accepted'
-                WHERE id = ?
-            """, (request["id"],))
-
+                UPDATE consultation_requests SET status = 'accepted' WHERE id = ?
+            """, (request_id,))
         elif action == "decline":
             db.execute("""
-                UPDATE consultation_requests
-                SET status = 'declined'
-                WHERE id = ?
-            """, (request["id"],))
-
+                UPDATE consultation_requests SET status = 'declined' WHERE id = ?
+            """, (request_id,))
         else:
             start = _parse_time(proposed_start)
             _check_future(start)
-
             db.execute("""
                 UPDATE consultation_requests
                 SET status = 'proposed', proposed_start = ?
                 WHERE id = ?
-            """, (_format_time(start), request["id"]))
+            """, (_format_time(start), request_id))
 
     return {"message": "Your response has been saved."}
 
@@ -491,11 +430,8 @@ def respond_to_proposal(token, request_id, accept):
 
     with connect_db() as db:
         db.execute("BEGIN IMMEDIATE")
-
         request = db.execute("""
-            SELECT *
-            FROM consultation_requests
-            WHERE id = ? AND student_id = ?
+            SELECT * FROM consultation_requests WHERE id = ? AND student_id = ?
         """, (request_id, student["id"])).fetchone()
 
         if request is None or request["status"] != "proposed":
@@ -504,24 +440,16 @@ def respond_to_proposal(token, request_id, accept):
         if accept:
             start = _parse_time(request["proposed_start"])
             _check_future(start)
-
             _create_appointment(
-                db,
-                request["teacher_id"],
-                student["id"],
-                start,
-                request_id=request["id"],
+                db, request["teacher_id"], student["id"], start, request_id=request_id
             )
-
             new_status = "accepted"
         else:
             new_status = "declined"
 
         db.execute("""
-            UPDATE consultation_requests
-            SET status = ?
-            WHERE id = ?
-        """, (new_status, request["id"]))
+            UPDATE consultation_requests SET status = ? WHERE id = ?
+        """, (new_status, request_id))
 
     return {"message": "Your response has been saved."}
 
@@ -532,18 +460,11 @@ def get_teacher_completed_appointments(token):
 
     with connect_db() as db:
         rows = db.execute("""
-            SELECT
-                a.id AS appointment_id,
-                a.starts_at,
-                a.ends_at,
-                u.full_name AS student_name,
-                u.student_id,
-                f.summary,
-                f.action_items
+            SELECT a.id AS appointment_id, a.starts_at, a.ends_at,
+                   u.full_name AS student_name, u.student_id, f.summary, f.action_items
             FROM appointments AS a
             JOIN users AS u ON u.id = a.student_id
-            LEFT JOIN consultation_followups AS f
-                ON f.appointment_id = a.id
+            LEFT JOIN consultation_followups AS f ON f.appointment_id = a.id
             WHERE a.teacher_id = ?
               AND a.status = 'confirmed'
               AND a.ends_at <= ?
@@ -553,12 +474,7 @@ def get_teacher_completed_appointments(token):
     return [dict(row) for row in rows]
 
 
-def save_consultation_followup(
-    token,
-    appointment_id,
-    summary,
-    action_items="",
-):
+def save_consultation_followup(token, appointment_id, summary, action_items=""):
     teacher = require_role(token, "teacher")
     appointment_id = _positive_id(appointment_id, "appointment")
     summary = (summary or "").strip()
@@ -566,43 +482,26 @@ def save_consultation_followup(
 
     if not summary:
         raise ValueError("Enter a consultation summary.")
-
     if len(summary) > 3000:
         raise ValueError("The summary must be 3000 characters or fewer.")
-
     if len(action_items) > 3000:
         raise ValueError("The action items must be 3000 characters or fewer.")
 
     now_text = _format_time(_now())
-    updated_at = int(time.time())
 
     with connect_db() as db:
         appointment = db.execute("""
             SELECT id, student_id
             FROM appointments
-            WHERE id = ?
-              AND teacher_id = ?
-              AND status = 'confirmed'
-              AND ends_at <= ?
-        """, (
-            appointment_id,
-            teacher["id"],
-            now_text,
-        )).fetchone()
+            WHERE id = ? AND teacher_id = ? AND status = 'confirmed' AND ends_at <= ?
+        """, (appointment_id, teacher["id"], now_text)).fetchone()
 
         if appointment is None:
-            raise ValueError(
-                "Completed consultation not found for your account."
-            )
+            raise ValueError("Completed consultation not found for your account.")
 
         db.execute("""
             INSERT INTO consultation_followups (
-                appointment_id,
-                teacher_id,
-                student_id,
-                summary,
-                action_items,
-                updated_at
+                appointment_id, teacher_id, student_id, summary, action_items, updated_at
             )
             VALUES (?, ?, ?, ?, ?, ?)
             ON CONFLICT(appointment_id) DO UPDATE SET
@@ -610,12 +509,8 @@ def save_consultation_followup(
                 action_items = excluded.action_items,
                 updated_at = excluded.updated_at
         """, (
-            appointment_id,
-            teacher["id"],
-            appointment["student_id"],
-            summary,
-            action_items,
-            updated_at,
+            appointment_id, teacher["id"], appointment["student_id"],
+            summary, action_items, int(time.time()),
         ))
 
     return {"message": "Consultation follow-up saved."}
@@ -626,30 +521,19 @@ def get_student_appointments(token):
 
     with connect_db() as db:
         appointments = db.execute("""
-            SELECT
-                a.id,
-                a.starts_at,
-                a.ends_at,
-                a.status,
-                u.full_name AS teacher_name,
-                f.summary AS followup_summary,
-                f.action_items AS followup_action_items
+            SELECT a.id, a.starts_at, a.ends_at, a.status,
+                   u.full_name AS teacher_name, f.summary AS followup_summary,
+                   f.action_items AS followup_action_items
             FROM appointments AS a
             JOIN users AS u ON u.id = a.teacher_id
-            LEFT JOIN consultation_followups AS f
-                ON f.appointment_id = a.id
+            LEFT JOIN consultation_followups AS f ON f.appointment_id = a.id
             WHERE a.student_id = ?
             ORDER BY a.starts_at
         """, (student["id"],)).fetchall()
 
         requests = db.execute("""
-            SELECT
-                r.id,
-                r.preferred_start,
-                r.proposed_start,
-                r.message,
-                r.status,
-                u.full_name AS teacher_name
+            SELECT r.id, r.preferred_start, r.proposed_start, r.message, r.status,
+                   u.full_name AS teacher_name
             FROM consultation_requests AS r
             JOIN users AS u ON u.id = r.teacher_id
             WHERE r.student_id = ?

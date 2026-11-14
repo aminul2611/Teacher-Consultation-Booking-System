@@ -1,689 +1,804 @@
-import {
-    getProfile,
-    getSessionToken,
-    logoutUser,
-    rpcCall,
-} from "./rpc.js";
+import { getProfile, getSessionToken, logoutUser, rpcCall } from "./rpc.js";
 import "./profile-ui.js";
 
-const teacherName = document.getElementById("teacher-name");
-const teacherAvatar = document.getElementById("teacher-avatar");
-const pageMessage = document.getElementById("teacher-message");
-const slotForm = document.getElementById("teacher-availability-form");
-const startDate = document.getElementById("slot-start-date");
-const startDateDisplay = document.getElementById("slot-start-date-display");
-const startTime = document.getElementById("slot-start-time");
-const endTime = document.getElementById("slot-end-time");
-const slotsList = document.getElementById("teacher-slots");
-const requestsList = document.getElementById("teacher-requests");
-const completedList = document.getElementById(
-    "teacher-completed-consultations"
-);
-const logoutButton = document.getElementById("teacher-logout-button");
-
+const byId = (id) => document.getElementById(id);
 const token = getSessionToken();
+const api = (method, params = {}) => rpcCall(method, { ...params, token });
 
-function openDatePicker(input) {
-    try {
-        if (typeof input.showPicker === "function") {
-            input.showPicker();
-        } else {
-            input.click();
-        }
-    } catch {
-        input.click();
+const slotDialog = byId("slot-dialog");
+const slotForm = byId("slot-form");
+const reviewDialog = byId("review-dialog");
+const proposalForm = byId("proposal-form");
+const pageSize = 6;
+
+const dateFormat = new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+});
+
+const weekdayFormat = new Intl.DateTimeFormat("en-GB", {
+    weekday: "long",
+});
+
+const timeFormat = new Intl.DateTimeFormat("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+});
+
+const statusNames = {
+    pending: "Pending",
+    accepted: "Accepted",
+    declined: "Declined",
+    proposed: "Proposed",
+};
+
+let currentView = "overview";
+let requests = [];
+let history = [];
+let requestsPage = 0;
+let historyPage = 0;
+let requestsLoaded = false;
+let requestsError = "";
+let historyLoaded = false;
+let historyError = "";
+let historyLoading = false;
+let scheduleLoad = null;
+let requestsLoad = null;
+let selectedRequest = null;
+let reviewBusy = false;
+
+function clockDate(date = new Date()) {
+    const pad = (value) => String(value).padStart(2, "0");
+
+    return [
+        date.getFullYear(),
+        pad(date.getMonth() + 1),
+        pad(date.getDate()),
+    ].join("-");
+}
+
+function dateText(value) {
+    return dateFormat.format(new Date(value));
+}
+
+function timeText(value) {
+    return timeFormat.format(new Date(value));
+}
+
+function rangeText(record) {
+    return `${timeText(record.starts_at)}–${timeText(record.ends_at)}`;
+}
+
+function dateTime(value) {
+    return `${dateText(value)} · ${timeText(value)}`;
+}
+
+function el(tag, text = "", className = "") {
+    const node = document.createElement(tag);
+    node.textContent = text;
+    node.className = className;
+    return node;
+}
+
+function button(text, handler, className = "button") {
+    const node = el("button", text, className);
+    node.type = "button";
+    node.addEventListener("click", handler);
+    return node;
+}
+
+function setText(id, value) {
+    byId(id).textContent = value;
+}
+
+function message(id, text, type = "") {
+    const node = byId(id);
+    node.textContent = text;
+    node.hidden = !text;
+
+    if (type) node.dataset.type = type;
+    else delete node.dataset.type;
+}
+
+function empty(container, text) {
+    container.replaceChildren(el("p", text, "empty"));
+}
+
+function makeRow(title, description) {
+    const row = el("div", "", "data-row");
+    const details = el("div", "", "row-details");
+
+    details.append(el("strong", title));
+
+    if (description) {
+        details.append(el("span", description, "muted"));
     }
+
+    row.append(details);
+    return row;
 }
 
-function localToday() {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, "0");
-    const day = String(today.getDate()).padStart(2, "0");
+function renderSchedule(records) {
+    const now = new Date();
+    const today = dateText(now);
+    const todayKey = clockDate(now);
+    const booked = (record) => record.status === "booked";
 
-    return `${year}-${month}-${day}`;
-}
-
-function initials(name = "Teacher") {
-    return String(name)
-        .trim()
-        .split(/\s+/)
-        .slice(0, 2)
-        .map((part) => part.charAt(0).toUpperCase())
-        .join("") || "T";
-}
-
-function setAvatar(user) {
-    if (!teacherAvatar) return;
-
-    teacherAvatar.replaceChildren();
-
-    if (!user.photo_path) {
-        teacherAvatar.textContent = initials(user.full_name);
-        return;
-    }
-
-    const image = document.createElement("img");
-    image.src = user.photo_path;
-    image.alt = `${user.full_name || "Teacher"}'s profile photo`;
-
-    image.addEventListener("error", () => {
-        teacherAvatar.replaceChildren();
-        teacherAvatar.textContent = initials(user.full_name);
+    const live = records.filter((record) => {
+        const boundary = booked(record) ? record.ends_at : record.starts_at;
+        return new Date(boundary) > now;
     });
 
-    teacherAvatar.append(image);
-}
-
-function showMessage(text, type = "") {
-    pageMessage.textContent = text;
-    pageMessage.hidden = !text;
-    pageMessage.className =
-        `teacher-dashboard-message ${type}`.trim();
-}
-
-function textElement(tag, text, className = "") {
-    const element = document.createElement(tag);
-    element.textContent = text ?? "";
-
-    if (className) {
-        element.className = className;
-    }
-
-    return element;
-}
-
-function button(
-    label,
-    handler,
-    className = "teacher-secondary-button"
-) {
-    const element = document.createElement("button");
-    element.type = "button";
-    element.className = className;
-    element.textContent = label;
-    element.addEventListener("click", handler);
-
-    return element;
-}
-
-function formatDateTime(value) {
-    if (!value) return "Time not set";
-
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return value;
-
-    const dateText = new Intl.DateTimeFormat("en-GB", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-    }).format(date);
-
-    const timeText = new Intl.DateTimeFormat(undefined, {
-        hour: "2-digit",
-        minute: "2-digit",
-    }).format(date);
-
-    return `${dateText} ${timeText}`;
-}
-
-function localIso(dateValue, timeValue) {
-    if (!dateValue || !timeValue) {
-        throw new Error("Choose a date, start time, and end time.");
-    }
-
-    const date = new Date(`${dateValue}T${timeValue}`);
-
-    if (Number.isNaN(date.getTime())) {
-        throw new Error("Choose a valid date and time.");
-    }
-
-    return date.toISOString();
-}
-
-function displayDate(dateValue) {
-    if (!dateValue) {
-        startDateDisplay.value = "";
-        return;
-    }
-
-    const [year, month, day] = dateValue.split("-");
-    startDateDisplay.value = `${day}/${month}/${year}`;
-}
-
-async function loadSlots() {
-    slotsList.replaceChildren(
-        textElement(
-            "p",
-            "Loading your upcoming schedule...",
-            "teacher-empty-state"
-        )
+    const todayRecords = live.filter((record) =>
+        clockDate(new Date(record.starts_at)) <= todayKey
     );
 
-    try {
-        const allSlots = await rpcCall("get_teacher_slots", { token });
-        const now = Date.now();
-        const upcomingSlots = allSlots.filter(
-            (slot) => new Date(slot.ends_at).getTime() > now
-        );
+    const futureRecords = live.filter((record) =>
+        clockDate(new Date(record.starts_at)) > todayKey
+    );
 
-        slotsList.replaceChildren();
+    const next = live.find(booked);
 
-        if (!upcomingSlots.length) {
-            slotsList.append(
-                textElement(
-                    "p",
-                    "There are no upcoming slots right now.",
-                    "teacher-empty-state"
-                )
-            );
-            return;
+    setText("today-label", `${weekdayFormat.format(now)} · ${today}`);
+    setText("metric-today", todayRecords.filter(booked).length);
+    setText("metric-future", futureRecords.filter(booked).length);
+
+    const inProgress = next && new Date(next.starts_at) <= now;
+
+    setText(
+        "next-label",
+        inProgress ? "Consultation in progress" : "Next consultation",
+    );
+    setText(
+        "next-name",
+        next ? next.student_name || "Student" : "No upcoming consultations",
+    );
+
+    byId("next-when").hidden = !next;
+    byId("next-topic").hidden = !next?.topic;
+    setText("next-topic", next?.topic || "");
+
+    if (next) {
+        setText("next-time", rangeText(next));
+
+        const nextDay = dateText(next.starts_at);
+        setText("next-date", nextDay === today ? `Today · ${today}` : nextDay);
+    }
+
+    const list = byId("schedule-list");
+    list.replaceChildren();
+
+    const groups = [
+        ["Today", todayRecords],
+        ["Upcoming", futureRecords],
+    ];
+
+    for (const [label, items] of groups) {
+        list.append(el("h3", label, "schedule-group"));
+
+        if (!items.length) {
+            list.append(el("p", "No slots scheduled.", "empty"));
         }
 
-        upcomingSlots.forEach((slot) => {
-            const card = document.createElement("article");
-            card.className = "teacher-slot-card";
+        for (const record of items) {
+            const isBooked = booked(record);
+            const day = dateText(record.starts_at);
 
-            const details = document.createElement("div");
-            details.className = "teacher-slot-details";
-            details.append(
-                textElement(
-                    "h3",
-                    formatDateTime(slot.starts_at),
-                    "teacher-slot-title"
-                ),
-                textElement(
-                    "p",
-                    `Ends: ${formatDateTime(slot.ends_at)}`,
-                    "teacher-slot-meta"
-                ),
-                textElement(
-                    "p",
-                    slot.status === "booked"
-                        ? `Booked by ${slot.student_name || "a student"}`
-                        : "Available for students",
-                    "teacher-slot-meta"
-                )
+            const row = makeRow(
+                isBooked ? record.student_name || "Student" : "Open for booking",
+                day === today ? "" : day,
             );
 
-            card.append(details);
-            slotsList.append(card);
-        });
-    } catch (error) {
-        slotsList.replaceChildren(
-            textElement(
-                "p",
-                `Could not load slots: ${error.message}`,
-                "teacher-empty-state"
-            )
-        );
+            row.classList.add("schedule-row");
+            row.prepend(el("span", rangeText(record), "time"));
+            row.append(el(
+                "span",
+                isBooked ? "Booked" : "Available",
+                isBooked ? "badge booked" : "badge",
+            ));
+
+            list.append(row);
+        }
     }
 }
 
-function makeProposalForm(requestId) {
-    const form = document.createElement("form");
-    form.className = "teacher-proposal-form";
+async function fetchSchedule() {
+    try {
+        renderSchedule(await api("get_teacher_schedule"));
+    } catch (error) {
+        setText("next-label", "Next consultation");
+        setText("next-name", "Schedule unavailable");
 
-    const field = document.createElement("div");
-    field.className = "teacher-proposal-field";
+        byId("next-when").hidden = true;
+        byId("next-topic").hidden = true;
 
-    const dateLabel = document.createElement("label");
-    dateLabel.textContent = "Suggested date (DD/MM/YYYY)";
+        setText("metric-today", "—");
+        setText("metric-future", "—");
+        empty(byId("schedule-list"), error.message);
+    }
+}
 
-    const dateControl = document.createElement("div");
-    dateControl.className = "teacher-proposal-date-control";
+function loadSchedule() {
+    scheduleLoad ??= fetchSchedule().finally(() => {
+        scheduleLoad = null;
+    });
 
-    const dateDisplay = document.createElement("input");
-    dateDisplay.type = "text";
-    dateDisplay.className = "teacher-proposal-date-display";
-    dateDisplay.placeholder = "DD/MM/YYYY";
-    dateDisplay.readOnly = true;
+    return scheduleLoad;
+}
 
-    const calendarIcon = document.createElement("span");
-    calendarIcon.className = "teacher-calendar-icon";
-    calendarIcon.setAttribute("aria-hidden", "true");
-    calendarIcon.textContent = "▦";
+function pagination(prefix, count, page) {
+    const start = page * pageSize;
 
-    const dateInput = document.createElement("input");
-    dateInput.type = "date";
-    dateInput.required = true;
-    dateInput.min = localToday();
-    dateInput.setAttribute("aria-label", "Choose proposed date");
+    byId(`${prefix}-pages`).hidden = count === 0;
 
-    dateInput.addEventListener("change", () => {
-        if (!dateInput.value) {
-            dateDisplay.value = "";
-            return;
+    setText(
+        `${prefix}-range`,
+        count ? `${start + 1}–${Math.min(start + pageSize, count)} of ${count}` : "",
+    );
+
+    byId(`${prefix}-prev`).disabled = page === 0;
+    byId(`${prefix}-next`).disabled = start + pageSize >= count;
+
+    return start;
+}
+
+function requestRow(request, compact = false) {
+    const requested = request.proposed_start || request.preferred_start;
+
+    const description = compact
+        ? request.message || dateTime(requested)
+        : [request.student_id, dateTime(requested)].filter(Boolean).join(" · ");
+
+    const row = makeRow(request.student_name || "Student", description);
+
+    if (request.status === "pending") {
+        const review = button("Review", () => openReview(request));
+
+        review.setAttribute(
+            "aria-label",
+            `Review request from ${request.student_name || "student"}`,
+        );
+
+        row.append(review);
+    } else {
+        const className = request.status === "accepted" ? "badge booked" : "badge";
+        row.append(el("span", statusNames[request.status] || request.status, className));
+    }
+
+    return row;
+}
+
+function renderRequests() {
+    const inbox = byId("inbox-list");
+    const list = byId("requests-list");
+
+    if (!requestsLoaded || requestsError) {
+        const text = requestsError || "Loading requests…";
+
+        empty(inbox, text);
+        empty(list, text);
+        byId("requests-pages").hidden = true;
+        byId("nav-count").hidden = true;
+        setText("metric-pending", "—");
+
+        return;
+    }
+
+    const pending = requests.filter((request) => request.status === "pending");
+
+    setText("metric-pending", pending.length);
+    setText("nav-count", pending.length);
+    byId("nav-count").hidden = pending.length === 0;
+
+    if (pending.length) {
+        inbox.replaceChildren(
+            ...pending.slice(0, 3).map((request) => requestRow(request, true)),
+        );
+    } else {
+        empty(inbox, "No requests need a reply.");
+    }
+
+    const query = byId("request-search").value.trim().toLowerCase();
+    const status = byId("request-status").value;
+
+    const matching = requests.filter((request) => {
+        const student = `${request.student_name || ""} ${request.student_id || ""}`
+            .toLowerCase();
+
+        return (!status || request.status === status) && student.includes(query);
+    });
+
+    requestsPage = Math.min(
+        requestsPage,
+        Math.max(0, Math.ceil(matching.length / pageSize) - 1),
+    );
+
+    const start = pagination("requests", matching.length, requestsPage);
+
+    if (matching.length) {
+        const page = matching.slice(start, start + pageSize);
+        list.replaceChildren(...page.map((request) => requestRow(request)));
+    } else {
+        empty(list, "No matching requests.");
+    }
+}
+
+async function fetchRequests() {
+    try {
+        requests = await api("get_teacher_requests");
+        requestsLoaded = true;
+        requestsError = "";
+    } catch (error) {
+        requestsError = error.message;
+    } finally {
+        renderRequests();
+    }
+}
+
+function loadRequests() {
+    requestsLoad ??= fetchRequests().finally(() => {
+        requestsLoad = null;
+    });
+
+    return requestsLoad;
+}
+
+function followup(record) {
+    const wrapper = el("div", "", "record-detail");
+    const preview = el("div", "", "note-preview");
+
+    function renderPreview() {
+        preview.replaceChildren(
+            el("p", record.summary || "No summary saved.", record.summary ? "" : "muted"),
+        );
+
+        if (record.action_items) {
+            preview.append(el("p", `Action items: ${record.action_items}`));
         }
+    }
 
-        const [year, month, day] = dateInput.value.split("-");
-        dateDisplay.value = `${day}/${month}/${year}`;
-    });
+    const editor = el("details", "", "followup-editor");
+    const toggle = el("summary", record.summary ? "Edit follow-up" : "Add follow-up");
+    const form = el("form", "", "followup-form");
 
-    dateDisplay.addEventListener("click", () => {
-        openDatePicker(dateInput);
-    });
+    const summaryLabel = el("label", "Consultation summary");
+    const summary = el("textarea");
 
-    dateControl.append(dateDisplay, calendarIcon, dateInput);
+    summary.rows = 3;
+    summary.required = true;
+    summary.maxLength = 3000;
+    summary.value = record.summary || "";
+    summaryLabel.append(summary);
 
-    const timeLabel = document.createElement("label");
-    timeLabel.textContent = "Suggested time";
+    const actionsLabel = el("label", "Action items (optional)");
+    const actions = el("textarea");
 
-    const timeInput = document.createElement("input");
-    timeInput.type = "time";
-    timeInput.required = true;
+    actions.rows = 2;
+    actions.maxLength = 3000;
+    actions.value = record.action_items || "";
+    actionsLabel.append(actions);
 
-    const submit = document.createElement("button");
-    submit.type = "submit";
-    submit.className = "teacher-primary-button";
-    submit.textContent = "Send proposal";
+    const save = el("button", "Save follow-up", "button primary");
+    save.type = "submit";
 
-    field.append(dateLabel, dateControl, timeLabel, timeInput);
-    form.append(field, submit);
+    const feedback = el("p", "", "inline-error");
+    feedback.setAttribute("role", "status");
+
+    form.append(summaryLabel, actionsLabel, save, feedback);
+    editor.append(toggle, form);
+    wrapper.append(preview, editor);
+
+    renderPreview();
 
     form.addEventListener("submit", async (event) => {
         event.preventDefault();
+        feedback.textContent = "";
 
-        const proposed = new Date(
-            `${dateInput.value}T${timeInput.value}`
-        );
+        const summaryValue = summary.value.trim();
+        const actionItems = actions.value.trim();
 
-        if (Number.isNaN(proposed.getTime())) {
-            showMessage(
-                "Choose a valid proposed date and time.",
-                "error"
-            );
+        if (!summaryValue) {
+            feedback.textContent = "Enter a consultation summary.";
+            summary.focus();
             return;
         }
 
-        submit.disabled = true;
-        submit.textContent = "Sending...";
+        save.disabled = true;
 
-        await answerRequest(
-            requestId,
-            "propose",
-            proposed.toISOString()
-        );
+        try {
+            const result = await api("save_consultation_followup", {
+                appointment_id: record.appointment_id,
+                summary: summaryValue,
+                action_items: actionItems,
+            });
 
-        submit.disabled = false;
-        submit.textContent = "Send proposal";
+            record.summary = summaryValue;
+            record.action_items = actionItems;
+
+            renderPreview();
+
+            toggle.textContent = "Edit follow-up";
+            editor.open = false;
+            toggle.focus();
+
+            message("page-message", result.message, "success");
+        } catch (error) {
+            feedback.textContent = error.message;
+        } finally {
+            save.disabled = false;
+        }
     });
 
-    return form;
+    return wrapper;
 }
 
-async function loadRequests() {
-    requestsList.replaceChildren(
-        textElement(
-            "p",
-            "Loading student requests...",
-            "teacher-empty-state"
-        )
+function historyRow(record) {
+    const completed = record.kind === "completed";
+    const item = el("details", "", "history-record");
+    const line = el("summary", "", "data-row");
+    const title = el("span", "", "row-details");
+
+    title.append(
+        el("strong", completed ? record.student_name || "Student" : "Unused availability"),
+        el("span", `${dateText(record.starts_at)} · ${rangeText(record)}`, "muted"),
     );
 
-    try {
-        const requests = await rpcCall(
-            "get_teacher_requests",
-            { token }
-        );
+    line.append(
+        title,
+        el(
+            "span",
+            completed ? "Completed" : "Expired slot",
+            completed ? "badge booked" : "badge",
+        ),
+    );
 
-        requestsList.replaceChildren();
+    item.append(line);
 
-        if (!requests.length) {
-            requestsList.append(
-                textElement(
-                    "p",
-                    "There are no student requests yet.",
-                    "teacher-empty-state"
-                )
-            );
-            return;
+    if (completed) {
+        if (record.student_id) {
+            item.append(el("p", `Student ID: ${record.student_id}`, "muted record-id"));
         }
 
-        requests.forEach((request) => {
-            const card = document.createElement("article");
-            card.className = "teacher-request-card";
+        item.append(followup(record));
+    } else {
+        item.append(el("p", "This slot ended without a booking.", "muted record-detail"));
+    }
 
-            const details = document.createElement("div");
-            details.className = "teacher-request-details";
-            details.append(
-                textElement(
-                    "h3",
-                    request.student_name,
-                    "teacher-request-title"
-                ),
-                textElement(
-                    "p",
-                    request.student_id
-                        ? `Student ID: ${request.student_id}`
-                        : "Student ID not provided",
-                    "teacher-request-meta"
-                ),
-                textElement(
-                    "p",
-                    `Preferred time: ${formatDateTime(request.preferred_start)}`,
-                    "teacher-request-meta"
-                ),
-                textElement(
-                    "p",
-                    `Status: ${request.status}`,
-                    "teacher-request-meta"
-                )
-            );
+    return item;
+}
 
-            if (request.message) {
-                details.append(
-                    textElement(
-                        "p",
-                        `Message: ${request.message}`,
-                        "teacher-request-meta"
-                    )
-                );
-            }
+function renderHistory() {
+    const list = byId("history-list");
 
-            if (request.proposed_start) {
-                details.append(
-                    textElement(
-                        "p",
-                        `Proposed time: ${formatDateTime(request.proposed_start)}`,
-                        "teacher-request-meta"
-                    )
-                );
-            }
+    if (historyError || !historyLoaded) {
+        empty(list, historyError || "Loading past activity…");
+        byId("history-pages").hidden = true;
+        return;
+    }
 
-            card.append(details);
+    const query = byId("history-search").value.trim().toLowerCase();
+    const kind = byId("history-type").value;
 
-            if (request.status === "pending") {
-                const actions = document.createElement("div");
-                actions.className = "teacher-request-actions";
-                actions.append(
-                    button(
-                        "Accept",
-                        async () => {
-                            await answerRequest(request.id, "accept");
-                        },
-                        "teacher-action-button accept"
-                    ),
-                    button(
-                        "Decline",
-                        async () => {
-                            await answerRequest(request.id, "decline");
-                        },
-                        "teacher-action-button reject"
-                    )
-                );
+    const matching = history.filter((record) => {
+        const searchText = [
+            record.student_name,
+            record.student_id,
+            dateText(record.starts_at),
+        ].join(" ").toLowerCase();
 
-                card.append(actions, makeProposalForm(request.id));
-            }
+        return (!kind || kind === record.kind) && searchText.includes(query);
+    });
 
-            requestsList.append(card);
-        });
-    } catch (error) {
-        requestsList.replaceChildren(
-            textElement(
-                "p",
-                `Could not load requests: ${error.message}`,
-                "teacher-empty-state"
-            )
-        );
+    historyPage = Math.min(
+        historyPage,
+        Math.max(0, Math.ceil(matching.length / pageSize) - 1),
+    );
+
+    const start = pagination("history", matching.length, historyPage);
+
+    if (matching.length) {
+        list.replaceChildren(...matching.slice(start, start + pageSize).map(historyRow));
+    } else {
+        empty(list, "No matching past activity.");
     }
 }
 
-async function answerRequest(
-    requestId,
-    action,
-    proposedStart = ""
-) {
+async function loadHistory() {
+    if (historyLoading) return;
+
+    historyLoading = true;
+    historyError = "";
+
+    if (!historyLoaded) renderHistory();
+
     try {
-        const result = await rpcCall("respond_to_request", {
-            token,
-            request_id: requestId,
+        const [consultations, slots] = await Promise.all([
+            api("get_teacher_completed_appointments"),
+            api("get_teacher_slots"),
+        ]);
+
+        const now = Date.now();
+
+        const expired = slots.filter((slot) =>
+            slot.status === "available" && Date.parse(slot.ends_at) <= now
+        );
+
+        history = [
+            ...consultations.map((record) => ({ ...record, kind: "completed" })),
+            ...expired.map((record) => ({ ...record, kind: "expired" })),
+        ].sort((a, b) => Date.parse(b.starts_at) - Date.parse(a.starts_at));
+
+        historyLoaded = true;
+    } catch (error) {
+        historyError = error.message;
+    } finally {
+        historyLoading = false;
+        renderHistory();
+    }
+}
+
+function setView(view) {
+    if (view === currentView) return;
+
+    currentView = view;
+    message("page-message", "");
+
+    for (const section of document.querySelectorAll("[data-panel]")) {
+        section.hidden = section.dataset.panel !== view;
+
+        if (!section.hidden) {
+            section.querySelector("h1").focus();
+        }
+    }
+
+    for (const control of document.querySelectorAll(".teacher-nav [data-view]")) {
+        if (control.dataset.view === view) {
+            control.setAttribute("aria-current", "page");
+        } else {
+            control.removeAttribute("aria-current");
+        }
+    }
+
+    if (view === "history") loadHistory();
+    if (view === "requests") loadRequests();
+    if (view === "overview") refreshOverview();
+}
+
+function syncDate(input) {
+    const display = input.parentElement.querySelector("[data-date-display]");
+
+    display.textContent = input.value
+        ? input.value.split("-").reverse().join("/")
+        : "DD/MM/YYYY";
+}
+
+function prepareDate(form) {
+    form.reset();
+
+    const input = form.elements.date;
+    input.min = clockDate();
+
+    syncDate(input);
+}
+
+function isoTime(date, time) {
+    const value = new Date(`${date}T${time}`);
+
+    if (Number.isNaN(value.getTime())) {
+        throw new Error("Choose a valid date and time.");
+    }
+
+    const normalized = `${clockDate(value)}T${timeText(value)}`;
+
+    if (normalized !== `${date}T${time}`) {
+        throw new Error("Choose a valid date and time.");
+    }
+
+    return value.toISOString();
+}
+
+function openReview(request) {
+    selectedRequest = request;
+
+    byId("review-info").replaceChildren(
+        el("strong", request.student_name || "Student"),
+        el("p", request.student_id ? `Student ID: ${request.student_id}` : "", "muted"),
+        el("p", `Preferred time: ${dateTime(request.preferred_start)}`),
+        el("p", request.message || "", "request-message"),
+    );
+
+    byId("proposal-details").open = false;
+    prepareDate(proposalForm);
+    message("review-error", "");
+    reviewDialog.showModal();
+}
+
+async function refreshOverview() {
+    await Promise.all([loadSchedule(), loadRequests()]);
+}
+
+async function answerRequest(action, proposedStart = "") {
+    if (reviewBusy || !selectedRequest) return;
+
+    reviewBusy = true;
+
+    const buttons = [...reviewDialog.querySelectorAll("button")];
+    buttons.forEach((control) => {
+        control.disabled = true;
+    });
+
+    message("review-error", "");
+
+    try {
+        const result = await api("respond_to_request", {
+            request_id: selectedRequest.id,
             action,
             proposed_start: proposedStart,
         });
 
-        showMessage(result.message, "success");
-        await Promise.all([loadRequests(), loadSlots()]);
+        reviewDialog.close();
+        message("page-message", result.message, "success");
+
+        await Promise.all([scheduleLoad, requestsLoad]);
+        await refreshOverview();
+
+        byId(currentView === "requests" ? "request-search" : "attention-title").focus();
     } catch (error) {
-        showMessage(error.message, "error");
+        message("review-error", error.message);
+    } finally {
+        buttons.forEach((control) => {
+            control.disabled = false;
+        });
+
+        reviewBusy = false;
     }
 }
 
-async function loadCompletedConsultations() {
-    completedList.replaceChildren(
-        textElement(
-            "p",
-            "Loading history...",
-            "teacher-empty-state"
-        )
-    );
+for (const control of document.querySelectorAll("[data-view]")) {
+    control.addEventListener("click", () => setView(control.dataset.view));
+}
 
-    try {
-        const [appointments, allSlots] = await Promise.all([
-            rpcCall("get_teacher_completed_appointments", { token }),
-            rpcCall("get_teacher_slots", { token }),
-        ]);
+for (const control of document.querySelectorAll("[data-close]")) {
+    control.addEventListener("click", () => control.closest("dialog").close());
+}
 
-        const now = Date.now();
-        const expiredUnusedSlots = allSlots.filter(
-            (slot) =>
-                new Date(slot.ends_at).getTime() <= now &&
-                slot.status !== "booked"
-        );
+for (const input of document.querySelectorAll(".date-field input[type='date']")) {
+    input.addEventListener("input", () => syncDate(input));
+    input.addEventListener("change", () => syncDate(input));
 
-        completedList.replaceChildren();
-
-        if (!appointments.length && !expiredUnusedSlots.length) {
-            completedList.append(
-                textElement(
-                    "p",
-                    "There are no past slots or completed consultations yet.",
-                    "teacher-empty-state"
-                )
-            );
-            return;
+    input.addEventListener("click", () => {
+        try {
+            input.showPicker?.();
+        } catch {
+            // The native date input remains available.
         }
-
-        expiredUnusedSlots.forEach((slot) => {
-            const card = document.createElement("article");
-            card.className = "teacher-completed-item teacher-expired-slot";
-
-            const details = document.createElement("div");
-            details.className = "teacher-completed-details";
-            details.append(
-                textElement(
-                    "h3",
-                    "Expired available slot",
-                    "teacher-completed-title"
-                ),
-                textElement(
-                    "p",
-                    `${formatDateTime(slot.starts_at)} – ${formatDateTime(slot.ends_at)}`,
-                    "teacher-completed-meta"
-                ),
-                textElement(
-                    "p",
-                    "No student booked this time.",
-                    "teacher-completed-meta"
-                )
-            );
-
-            card.append(details);
-            completedList.append(card);
-        });
-
-        appointments.forEach((appointment) => {
-            const card = document.createElement("article");
-            card.className = "teacher-completed-item";
-
-            const details = document.createElement("div");
-            details.className = "teacher-completed-details";
-            details.append(
-                textElement(
-                    "h3",
-                    appointment.student_name,
-                    "teacher-completed-title"
-                ),
-                textElement(
-                    "p",
-                    `${formatDateTime(appointment.starts_at)} – ${formatDateTime(appointment.ends_at)}`,
-                    "teacher-completed-meta"
-                )
-            );
-
-            if (appointment.summary) {
-                details.append(
-                    textElement(
-                        "p",
-                        `Summary: ${appointment.summary}`,
-                        "teacher-completed-meta teacher-followup-preview"
-                    )
-                );
-            }
-
-            if (appointment.action_items) {
-                details.append(
-                    textElement(
-                        "p",
-                        `Action items: ${appointment.action_items}`,
-                        "teacher-completed-meta teacher-followup-preview"
-                    )
-                );
-            }
-
-            const form = document.createElement("form");
-            form.className = "teacher-followup-form";
-
-            const summaryLabel = document.createElement("label");
-            summaryLabel.textContent = "Consultation summary";
-
-            const summary = document.createElement("textarea");
-            summary.required = true;
-            summary.maxLength = 3000;
-            summary.placeholder = "Write a brief summary";
-            summary.value = appointment.summary || "";
-
-            const actionLabel = document.createElement("label");
-            actionLabel.textContent = "Action items (optional)";
-
-            const actions = document.createElement("textarea");
-            actions.maxLength = 3000;
-            actions.placeholder = "Add any action items";
-            actions.value = appointment.action_items || "";
-
-            const save = document.createElement("button");
-            save.type = "submit";
-            save.className = "teacher-primary-button";
-            save.textContent = appointment.summary
-                ? "Update follow-up"
-                : "Save follow-up";
-
-            summaryLabel.append(summary);
-            actionLabel.append(actions);
-            form.append(summaryLabel, actionLabel, save);
-
-            const followupDetails = document.createElement("details");
-            followupDetails.className = "teacher-followup-disclosure";
-
-            const followupToggle = document.createElement("summary");
-            followupToggle.textContent = appointment.summary
-                ? "Edit follow-up notes"
-                : "Add follow-up notes";
-
-            followupDetails.append(followupToggle, form);
-
-            form.addEventListener("submit", async (event) => {
-                event.preventDefault();
-                save.disabled = true;
-
-                try {
-                    const result = await rpcCall(
-                        "save_consultation_followup",
-                        {
-                            token,
-                            appointment_id: appointment.appointment_id,
-                            summary: summary.value.trim(),
-                            action_items: actions.value.trim(),
-                        }
-                    );
-
-                    showMessage(result.message, "success");
-                    await loadCompletedConsultations();
-                } catch (error) {
-                    showMessage(error.message, "error");
-                } finally {
-                    save.disabled = false;
-                }
-            });
-
-            card.append(details, followupDetails);
-            completedList.append(card);
-        });
-    } catch (error) {
-        completedList.replaceChildren(
-            textElement(
-                "p",
-                `Could not load completed consultations: ${error.message}`,
-                "teacher-empty-state"
-            )
-        );
-    }
+    });
 }
+
+byId("open-slot").addEventListener("click", () => {
+    prepareDate(slotForm);
+    message("slot-error", "");
+    slotDialog.showModal();
+});
 
 slotForm.addEventListener("submit", async (event) => {
     event.preventDefault();
-    showMessage("Adding available time...");
+
+    const { date, start, end } = slotForm.elements;
+    const submit = slotForm.querySelector('button[type="submit"]');
+    const close = slotForm.querySelector("[data-close]");
+
+    if (submit.disabled) return;
+
+    submit.disabled = true;
+    close.disabled = true;
+    message("slot-error", "");
 
     try {
-        const startsAt = localIso(
-            startDate.value,
-            startTime.value
-        );
-        const endsAt = localIso(
-            startDate.value,
-            endTime.value
-        );
+        const startsAt = isoTime(date.value, start.value);
+        const endsAt = isoTime(date.value, end.value);
 
-        const result = await rpcCall("add_teacher_slot", {
-            token,
+        if (Date.parse(startsAt) <= Date.now()) {
+            throw new Error("Choose a future start time.");
+        }
+
+        if (endsAt <= startsAt) {
+            throw new Error("End time must be after start time.");
+        }
+
+        const result = await api("add_teacher_slot", {
             starts_at: startsAt,
             ends_at: endsAt,
         });
 
-        showMessage(result.message, "success");
-        slotForm.reset();
-        startDateDisplay.value = "";
-        await loadSlots();
+        slotDialog.close();
+        message("page-message", result.message, "success");
+
+        await scheduleLoad;
+        await loadSchedule();
     } catch (error) {
-        showMessage(error.message, "error");
+        message("slot-error", error.message);
+    } finally {
+        submit.disabled = false;
+        close.disabled = false;
     }
 });
 
-startDate.min = localToday();
-
-startDate.addEventListener("change", () => {
-    displayDate(startDate.value);
+slotDialog.addEventListener("cancel", (event) => {
+    if (slotForm.querySelector('button[type="submit"]').disabled) {
+        event.preventDefault();
+    }
 });
 
-startDateDisplay.addEventListener("click", () => {
-    openDatePicker(startDate);
+for (const control of reviewDialog.querySelectorAll("[data-action]")) {
+    control.addEventListener("click", () => answerRequest(control.dataset.action));
+}
+
+reviewDialog.addEventListener("cancel", (event) => {
+    if (reviewBusy) event.preventDefault();
 });
 
-document
-    .getElementById("teacher-refresh-slots")
-    .addEventListener("click", loadSlots);
+proposalForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
 
-document
-    .getElementById("teacher-refresh-requests")
-    .addEventListener("click", loadRequests);
+    try {
+        const proposedStart = isoTime(
+            proposalForm.elements.date.value,
+            proposalForm.elements.time.value,
+        );
 
-document
-    .getElementById("teacher-refresh-completed")
-    .addEventListener("click", loadCompletedConsultations);
+        if (Date.parse(proposedStart) <= Date.now()) {
+            throw new Error("Choose a future time.");
+        }
 
-logoutButton.addEventListener("click", async () => {
-    logoutButton.disabled = true;
-    logoutButton.textContent = "Logging out...";
+        await answerRequest("propose", proposedStart);
+    } catch (error) {
+        message("review-error", error.message);
+    }
+});
+
+for (const [id, event] of [["request-search", "input"], ["request-status", "change"]]) {
+    byId(id).addEventListener(event, () => {
+        requestsPage = 0;
+        renderRequests();
+    });
+}
+
+for (const [id, event] of [["history-search", "input"], ["history-type", "change"]]) {
+    byId(id).addEventListener(event, () => {
+        historyPage = 0;
+        renderHistory();
+    });
+}
+
+byId("requests-prev").addEventListener("click", () => {
+    requestsPage -= 1;
+    renderRequests();
+});
+
+byId("requests-next").addEventListener("click", () => {
+    requestsPage += 1;
+    renderRequests();
+});
+
+byId("history-prev").addEventListener("click", () => {
+    historyPage -= 1;
+    renderHistory();
+});
+
+byId("history-next").addEventListener("click", () => {
+    historyPage += 1;
+    renderHistory();
+});
+
+byId("refresh-overview").addEventListener("click", refreshOverview);
+byId("refresh-requests").addEventListener("click", loadRequests);
+byId("refresh-history").addEventListener("click", loadHistory);
+
+byId("teacher-logout-button").addEventListener("click", async (event) => {
+    event.currentTarget.disabled = true;
 
     try {
         await logoutUser();
@@ -692,37 +807,39 @@ logoutButton.addEventListener("click", async () => {
     }
 });
 
-async function startTeacherPage() {
+async function start() {
     if (!token) {
-        window.location.replace("/index.html");
+        window.location.replace("/teacher-login.html");
         return;
     }
 
+    let user;
+
     try {
-        const user = await getProfile();
-
-        if (user.role !== "teacher") {
-            window.location.replace(
-                user.role === "student"
-                    ? "/student.html"
-                    : "/index.html"
-            );
-            return;
-        }
-
-        teacherName.textContent = user.full_name || "Teacher";
-        setAvatar(user);
-
-        await Promise.all([
-            loadSlots(),
-            loadRequests(),
-            loadCompletedConsultations(),
-        ]);
+        user = await getProfile();
     } catch (error) {
-        console.error("Could not start teacher page:", error);
-        sessionStorage.removeItem("campusconnect_session_token");
-        window.location.replace("/index.html");
+        setText("teacher-startup-message", "Could not sign you in. " + error.message);
+        return;
     }
+
+    if (user.role !== "teacher") {
+        window.location.replace(
+            user.role === "student" ? "/student.html" : "/teacher-login.html",
+        );
+        return;
+    }
+
+    setText("teacher-name", user.full_name || "Teacher");
+
+    const now = new Date();
+    setText("today-label", `${weekdayFormat.format(now)} · ${dateText(now)}`);
+
+    renderRequests();
+
+    byId("teacher-startup").hidden = true;
+    byId("teacher-dashboard").hidden = false;
+
+    await refreshOverview();
 }
 
-startTeacherPage();
+await start();

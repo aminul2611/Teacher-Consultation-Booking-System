@@ -3,30 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta
-        name="description"
-        content="Set your availability and manage student consultation requests."
-    >
     <title>Teacher Dashboard | Campus Connect</title>
-
-    <link rel="stylesheet" href="css/teacher.css">
-    <script type="module" src="js/teacher.js"></script>
+    <link rel="stylesheet" href="css/teacher.css?v=2">
+    <script type="module">
+    import("./js/teacher.js?v=3").catch((error) => {
+        console.error(error);
+        document.getElementById("teacher-startup-message").textContent =
+            "Could not load the dashboard. " + error.message;
+    });
+</script>
 </head>
-
 <body>
-    <div class="teacher-dashboard-shell">
+        <section id="teacher-startup" class="teacher-dashboard-shell" style="padding-top: 24px">
+            <h1>Teacher Dashboard</h1>
+            <p id="teacher-startup-message" role="status">Loading dashboard…</p>
+            <p><a href="teacher-login.html">Back to teacher sign in</a></p>
+            <noscript>Enable JavaScript to open the dashboard.</noscript>
+        </section>
+    <div class="teacher-dashboard-shell" id="teacher-dashboard" hidden>
         <header class="teacher-dashboard-header">
-            <a
-                class="teacher-brand-lockup"
-                href="index.html"
-                aria-label="Campus Connect home"
-            >
-                <img
-                    class="teacher-brand-logo"
-                    src="images/campus-logo.png"
-                    alt="SWUST logo"
-                >
-
+            <a class="teacher-brand-lockup" href="index.html" aria-label="Campus Connect home">
+                <img class="teacher-brand-logo" src="images/campus-logo.png" alt="SWUST logo">
                 <span class="teacher-brand-copy">
                     <span class="teacher-brand-name">Campus Connect</span>
                     <span class="teacher-brand-subtitle">SWUST</span>
@@ -34,221 +31,203 @@
             </a>
 
             <div class="teacher-account-actions">
-                <div
-                    class="teacher-avatar"
-                    id="teacher-avatar"
-                    aria-hidden="true"
-                >T</div>
-
+                <div class="teacher-avatar" id="teacher-avatar" aria-hidden="true">T</div>
                 <span class="teacher-name" id="teacher-name">Teacher</span>
-
-                <button
-                    class="teacher-secondary-button"
-                    id="profile-open-button"
-                    type="button"
-                >
+                <button class="teacher-secondary-button" id="profile-open-button" type="button">
                     My profile
                 </button>
-
-                <button
-                    class="teacher-secondary-button"
-                    id="teacher-logout-button"
-                    type="button"
-                >
+                <button class="teacher-secondary-button" id="teacher-logout-button" type="button">
                     Log out
                 </button>
             </div>
         </header>
 
-        <main class="teacher-dashboard-main">
-            <section class="teacher-page-intro">
-                <div class="teacher-intro-copy">
-                    <p class="teacher-eyebrow">TEACHER WORKSPACE</p>
-                    <h1>Manage consultations</h1>
-                    <p>
-                        Set your available times and respond to student requests.
-                    </p>
-                </div>
-            </section>
+        <nav class="teacher-nav" aria-label="Teacher dashboard">
+            <button type="button" data-view="overview" aria-current="page">Overview</button>
+            <button type="button" data-view="requests">
+                Requests <span id="nav-count" class="badge pending" hidden></span>
+            </button>
+            <button type="button" data-view="history">Past activity</button>
+        </nav>
 
-            <div
-                class="teacher-dashboard-message"
-                id="teacher-message"
-                role="status"
-                aria-live="polite"
-                hidden
-            ></div>
+        <main class="teacher-main">
+            <p id="page-message" class="message" role="status" hidden></p>
 
-            <section
-                class="teacher-dashboard-card"
-                aria-labelledby="availability-title"
-            >
-                <div class="teacher-card-heading">
+            <section data-panel="overview" aria-labelledby="overview-title">
+                <div class="page-heading">
                     <div>
-                        <p class="teacher-eyebrow">SET YOUR SCHEDULE</p>
-                        <h2 id="availability-title">Add available time</h2>
-                        <p class="teacher-card-description">
-                            Students can book a slot after you add it.
-                        </p>
+                        <p id="today-label" class="eyebrow"></p>
+                        <h1 id="overview-title" tabindex="-1">Consultation overview</h1>
                     </div>
+                    <button class="button primary" id="open-slot" type="button">
+                        + Add available time
+                    </button>
                 </div>
 
-                <form
-                    id="teacher-availability-form"
-                    class="teacher-form"
-                >
-                    <div class="teacher-form-field">
-                        <label for="slot-start-date-display">
-                            Date (DD/MM/YYYY)
-                        </label>
+                <section class="next-booking" aria-labelledby="next-name">
+                    <div>
+                        <p id="next-label" class="eyebrow">Next consultation</p>
+                        <h2 id="next-name">Loading schedule…</h2>
+                        <p id="next-topic" class="next-topic" hidden></p>
+                    </div>
+                    <div id="next-when" class="next-when" hidden>
+                        <strong id="next-time"></strong>
+                        <small id="next-date"></small>
+                    </div>
+                </section>
 
-                        <div class="teacher-date-picker-control">
-                            <input
-                                id="slot-start-date-display"
-                                type="text"
-                                placeholder="DD/MM/YYYY"
-                                readonly
-                                aria-label="Date in day, month, year format"
-                            >
+                <dl class="metrics" aria-label="Schedule summary">
+                    <div><dt>Remaining today</dt><dd id="metric-today">—</dd></div>
+                    <div><dt>Future bookings</dt><dd id="metric-future">—</dd></div>
+                    <div><dt>Pending requests</dt><dd id="metric-pending">—</dd></div>
+                </dl>
 
-                            <span
-                                class="teacher-calendar-icon"
-                                aria-hidden="true"
-                            >▦</span>
-
-                            <input
-                                id="slot-start-date"
-                                type="date"
-                                required
-                                aria-label="Choose slot date"
-                            >
+                <div class="overview-grid">
+                    <section class="panel" aria-labelledby="schedule-title">
+                        <div class="panel-heading">
+                            <h2 id="schedule-title">Schedule</h2>
+                            <button class="button" id="refresh-overview" type="button">Refresh</button>
                         </div>
-                    </div>
+                        <div id="schedule-list"><p class="empty">Loading schedule…</p></div>
+                    </section>
 
-                    <div class="teacher-form-field">
-                        <label for="slot-start-time">Start time</label>
-                        <input
-                            id="slot-start-time"
-                            type="time"
-                            required
-                        >
-                    </div>
-
-                    <div class="teacher-form-field">
-                        <label for="slot-end-time">End time</label>
-                        <input
-                            id="slot-end-time"
-                            type="time"
-                            required
-                        >
-                    </div>
-
-                    <button
-                        class="teacher-primary-button"
-                        type="submit"
-                    >
-                        Add available time
-                    </button>
-                </form>
-            </section>
-
-            <section
-                class="teacher-dashboard-card"
-                aria-labelledby="slots-title"
-            >
-                <div class="teacher-card-heading">
-                    <div>
-                        <p class="teacher-eyebrow">YOUR SCHEDULE</p>
-                        <h2 id="slots-title">Upcoming schedule</h2>
-                        <p class="teacher-card-description">
-                            Future times and bookings appear here. Past activity stays in the history section.
-                        </p>
-                    </div>
-
-                    <button
-                        class="teacher-secondary-button"
-                        id="teacher-refresh-slots"
-                        type="button"
-                    >
-                        Refresh
-                    </button>
+                    <section class="panel" aria-labelledby="attention-title">
+                        <div class="panel-heading">
+                            <h2 id="attention-title" tabindex="-1">Needs your attention</h2>
+                        </div>
+                        <div id="inbox-list"><p class="empty">Loading requests…</p></div>
+                        <button class="button text-button" type="button" data-view="requests">
+                            View all requests →
+                        </button>
+                    </section>
                 </div>
 
-                <div class="teacher-slots-list" id="teacher-slots">
-                    <p class="teacher-empty-state">
-                        Loading your upcoming schedule...
-                    </p>
+                <div class="past-link panel">
+                    <div>
+                        <strong>Past activity</strong>
+                        <p>Completed consultations and expired slots</p>
+                    </div>
+                    <button class="button" type="button" data-view="history">
+                        View past activity →
+                    </button>
                 </div>
             </section>
 
-            <section
-                class="teacher-dashboard-card"
-                aria-labelledby="requests-title"
-            >
-                <div class="teacher-card-heading">
-                    <div>
-                        <p class="teacher-eyebrow">STUDENT ACTIVITY</p>
-                        <h2 id="requests-title">Student requests</h2>
-                        <p class="teacher-card-description">
-                            Accept, reject, or suggest another time for a request.
-                        </p>
-                    </div>
-
-                    <button
-                        class="teacher-secondary-button"
-                        id="teacher-refresh-requests"
-                        type="button"
-                    >
-                        Refresh
-                    </button>
+            <section data-panel="requests" aria-labelledby="requests-title" hidden>
+                <div class="page-heading">
+                    <h1 id="requests-title" tabindex="-1">Consultation requests</h1>
+                    <button class="button" id="refresh-requests" type="button">Refresh</button>
                 </div>
-
-                <div class="teacher-requests-list" id="teacher-requests">
-                    <p class="teacher-empty-state">
-                        Loading student requests...
-                    </p>
+                <div class="panel">
+                    <div class="filter-grid">
+                        <label>Search students
+                            <input id="request-search" type="search" placeholder="Name or student ID">
+                        </label>
+                        <label>Status
+                            <select id="request-status">
+                                <option value="pending">Pending</option>
+                                <option value="">All statuses</option>
+                                <option value="accepted">Accepted</option>
+                                <option value="proposed">Proposed</option>
+                                <option value="declined">Declined</option>
+                            </select>
+                        </label>
+                    </div>
+                    <div id="requests-list"></div>
+                    <nav id="requests-pages" class="pager" aria-label="Request pages" hidden>
+                        <span id="requests-range" role="status"></span>
+                        <div>
+                            <button class="button" id="requests-prev" type="button">Previous</button>
+                            <button class="button" id="requests-next" type="button">Next</button>
+                        </div>
+                    </nav>
                 </div>
             </section>
 
-            <section
-                class="teacher-dashboard-card"
-                aria-labelledby="completed-consultations-title"
-            >
-                <div class="teacher-card-heading">
-                    <div>
-                        <p class="teacher-eyebrow">PAST ACTIVITY</p>
-                        <h2 id="completed-consultations-title">
-                            Past slots &amp; consultations
-                        </h2>
-                        <p class="teacher-card-description">
-                            Expired unused slots and completed meetings stay saved here.
-                        </p>
-                    </div>
-
-                    <button
-                        class="teacher-secondary-button"
-                        id="teacher-refresh-completed"
-                        type="button"
-                    >
-                        Refresh
-                    </button>
+            <section data-panel="history" aria-labelledby="history-title" hidden>
+                <div class="page-heading">
+                    <h1 id="history-title" tabindex="-1">Past activity</h1>
+                    <button class="button" id="refresh-history" type="button">Refresh</button>
                 </div>
-
-                <div
-                    class="teacher-completed-consultations-list"
-                    id="teacher-completed-consultations"
-                >
-                    <p class="teacher-empty-state">
-                        Loading history...
-                    </p>
+                <div class="panel">
+                    <div class="filter-grid">
+                        <label>Search history
+                            <input id="history-search" type="search" placeholder="Name, student ID or DD/MM/YYYY">
+                        </label>
+                        <label>Type
+                            <select id="history-type">
+                                <option value="">All activity</option>
+                                <option value="completed">Completed</option>
+                                <option value="expired">Expired slot</option>
+                            </select>
+                        </label>
+                    </div>
+                    <div id="history-list"></div>
+                    <nav id="history-pages" class="pager" aria-label="History pages" hidden>
+                        <span id="history-range" role="status"></span>
+                        <div>
+                            <button class="button" id="history-prev" type="button">Previous</button>
+                            <button class="button" id="history-next" type="button">Next</button>
+                        </div>
+                    </nav>
                 </div>
             </section>
         </main>
-
-        <footer class="teacher-dashboard-footer">
-            <span>Campus Connect · SWUST</span>
-            <span>Connecting students and teachers</span>
-        </footer>
     </div>
+
+    <dialog id="slot-dialog" class="teacher-dialog" aria-labelledby="slot-title">
+        <form id="slot-form">
+            <div class="panel-heading">
+                <h2 id="slot-title">Add available time</h2>
+                <button class="button" type="button" data-close>Close</button>
+            </div>
+            <div class="time-grid">
+                <label class="wide">Date (DD/MM/YYYY)
+                    <span class="date-field">
+                        <span data-date-display aria-hidden="true">DD/MM/YYYY</span>
+                        <input name="date" type="date" required>
+                        <span class="calendar-icon" aria-hidden="true">▦</span>
+                    </span>
+                </label>
+                <label>Start time<input name="start" type="time" required></label>
+                <label>End time<input name="end" type="time" required></label>
+            </div>
+            <p id="slot-error" class="inline-error" role="alert" hidden></p>
+            <div class="dialog-actions">
+                <button class="button primary" type="submit">Add slot</button>
+            </div>
+        </form>
+    </dialog>
+
+    <dialog id="review-dialog" class="teacher-dialog" aria-labelledby="review-title">
+        <div class="panel-heading">
+            <h2 id="review-title">Review request</h2>
+            <button class="button" type="button" data-close>Close</button>
+        </div>
+        <div id="review-info" class="review-info"></div>
+        <p id="review-error" class="inline-error" role="alert" hidden></p>
+        <div class="dialog-actions">
+            <button class="button primary" type="button" data-action="accept">Accept request</button>
+            <button class="button" type="button" data-action="decline">Decline</button>
+        </div>
+        <details id="proposal-details" class="proposal">
+            <summary>Suggest another time</summary>
+            <form id="proposal-form">
+                <div class="time-grid">
+                    <label>Date (DD/MM/YYYY)
+                        <span class="date-field">
+                            <span data-date-display aria-hidden="true">DD/MM/YYYY</span>
+                            <input name="date" type="date" required>
+                            <span class="calendar-icon" aria-hidden="true">▦</span>
+                        </span>
+                    </label>
+                    <label>Time<input name="time" type="time" required></label>
+                </div>
+                <div class="dialog-actions">
+                    <button class="button primary" type="submit">Send proposal</button>
+                </div>
+            </form>
+        </details>
+    </dialog>
 </body>
 </html>

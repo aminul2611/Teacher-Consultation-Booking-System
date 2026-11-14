@@ -1,600 +1,586 @@
-import {
-    getProfile,
-    getSessionToken,
-    logoutUser,
-    rpcCall,
-} from "./rpc.js";
+import { getProfile, getSessionToken, logoutUser, rpcCall } from "./rpc.js";
 import "./profile-ui.js";
 
-const studentName = document.getElementById("student-name");
-const studentAvatar = document.getElementById("student-avatar");
-const globalMessage = document.getElementById("student-message");
-const refreshSlotsButton = document.getElementById("refresh-slots");
-const teacherSearch = document.getElementById("teacher-search");
-const teacherResults = document.getElementById("teacher-results");
-const selectedTeacherPanel = document.getElementById("selected-teacher");
-const selectedTeacherName = document.getElementById("selected-teacher-name");
-const changeTeacherButton = document.getElementById("change-teacher");
-const availableSlots = document.getElementById("available-slots");
-const requestForm = document.getElementById("consultation-request-form");
-const requestTeacherSelect = document.getElementById("request-teacher-select");
-const preferredDate = document.getElementById("preferred-date");
-const preferredDateDisplay = document.getElementById("preferred-date-display");
-const preferredTime = document.getElementById("preferred-time");
-const requestMessage = document.getElementById("request-message");
-const appointmentsList = document.getElementById("student-appointments");
-const logoutButton = document.getElementById("logout-button");
+const get = (id) => document.getElementById(id);
+const api = (method, params = {}) => rpcCall(method, {
+    ...params,
+    token: getSessionToken(),
+});
 
-const token = getSessionToken();
-
-function openDatePicker(input) {
-    try {
-        if (typeof input.showPicker === "function") {
-            input.showPicker();
-        } else {
-            input.click();
-        }
-    } catch {
-        input.click();
-    }
-}
+const search = get("teacher-search");
+const results = get("teacher-results");
+const browse = get("browse-teachers");
+const request = get("request-form");
+const dateInput = get("preferred-date");
+const book = get("book-slot");
 
 let teachers = [];
-let slots = [];
-let selectedTeacher = null;
+let browseOpen = false;
+let teacher = null;
+let activeSlot = null;
+let selectionVersion = 0;
+let activityVersion = 0;
+let activityBusy = false;
+let bookingBusy = false;
 
-function initials(name = "Student") {
-    return String(name)
-        .trim()
-        .split(/\s+/)
-        .slice(0, 2)
-        .map((part) => part.charAt(0).toUpperCase())
-        .join("") || "S";
+const dateFormat = new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+});
+
+const timeFormat = new Intl.DateTimeFormat("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+});
+
+function dateTime(value) {
+    const date = new Date(value);
+    return `${dateFormat.format(date)} · ${timeFormat.format(date)}`;
 }
 
-function setAvatar(user) {
-    if (!studentAvatar) return;
-
-    studentAvatar.replaceChildren();
-
-    if (!user.photo_path) {
-        studentAvatar.textContent = initials(user.full_name);
-        return;
-    }
-
-    const image = document.createElement("img");
-    image.src = user.photo_path;
-    image.alt = `${user.full_name || "Student"}'s profile photo`;
-
-    image.addEventListener("error", () => {
-        studentAvatar.replaceChildren();
-        studentAvatar.textContent = initials(user.full_name);
-    });
-
-    studentAvatar.append(image);
-}
-
-function showMessage(text, type = "") {
-    if (!globalMessage) return;
-
-    globalMessage.textContent = text;
-    globalMessage.hidden = !text;
-    globalMessage.className = `dashboard-message ${type}`.trim();
-}
-
-function createText(tag, text, className = "") {
+function node(tag, text = "", classes = "") {
     const element = document.createElement(tag);
-    element.textContent = text ?? "";
+    element.textContent = text;
+    element.className = classes;
+    return element;
+}
 
-    if (className) {
-        element.className = className;
+function button(text, handler, classes = "button") {
+    const control = node("button", text, classes);
+    control.type = "button";
+    control.addEventListener("click", handler);
+    return control;
+}
+
+function status(id, text, kind = "") {
+    const element = get(id);
+    element.textContent = text;
+    element.dataset.kind = kind;
+
+    if (id === "student-status") {
+        element.hidden = !text;
+    }
+}
+
+function localDate(date = new Date()) {
+    const pad = (value) => String(value).padStart(2, "0");
+
+    return [
+        date.getFullYear(),
+        pad(date.getMonth() + 1),
+        pad(date.getDate()),
+    ].join("-");
+}
+
+function avatar(person) {
+    const initials = (person.full_name || "Teacher").trim().split(/\s+/)
+        .slice(0, 2)
+        .map((word) => word.charAt(0).toUpperCase())
+        .join("") || "T";
+
+    const element = node("span", initials, "avatar");
+    element.setAttribute("aria-hidden", "true");
+
+    if (person.photo_path) {
+        const image = document.createElement("img");
+        image.alt = "";
+
+        image.addEventListener("error", () => {
+            element.textContent = initials;
+        });
+
+        image.src = person.photo_path;
+        element.replaceChildren(image);
     }
 
     return element;
 }
 
-function createButton(
-    text,
-    onClick,
-    className = "secondary-button"
-) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = className;
-    button.textContent = text;
-    button.addEventListener("click", onClick);
+function renderDirectory() {
+    const query = search.value.trim().toLowerCase();
+    const opened = Boolean(query || browseOpen);
 
-    return button;
-}
-
-function formatDateTime(value) {
-    if (!value) return "Time not set";
-
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return value;
-
-    const dateText = new Intl.DateTimeFormat("en-GB", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-    }).format(date);
-
-    const timeText = new Intl.DateTimeFormat(undefined, {
-        hour: "2-digit",
-        minute: "2-digit",
-    }).format(date);
-
-    return `${dateText} ${timeText}`;
-}
-
-function toIsoDateTime(date, time) {
-    if (!date || !time) {
-        throw new Error("Choose both a date and a time.");
-    }
-
-    const localDate = new Date(`${date}T${time}`);
-
-    if (Number.isNaN(localDate.getTime())) {
-        throw new Error("Choose a valid date and time.");
-    }
-
-    return localDate.toISOString();
-}
-
-function formatInputDate(value) {
-    if (!value) return "";
-
-    const [year, month, day] = value.split("-");
-    return `${day}/${month}/${year}`;
-}
-
-function localToday() {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, "0");
-    const day = String(today.getDate()).padStart(2, "0");
-
-    return `${year}-${month}-${day}`;
-}
-
-function renderTeachers() {
-    const query = teacherSearch.value.trim().toLowerCase();
-
-    const matches = teachers.filter((teacher) =>
-        `${teacher.full_name} ${teacher.department || ""}`
-            .toLowerCase()
-            .includes(query)
-    );
-
-    teacherResults.replaceChildren();
-
-    if (!matches.length) {
-        teacherResults.append(
-            createText(
-                "p",
-                "No teachers match your search.",
-                "empty-state"
-            )
-        );
-        return;
-    }
-
-    matches.forEach((teacher) => {
-        const card = document.createElement("article");
-        card.className = "teacher-card";
-
-        const details = document.createElement("div");
-        details.className = "teacher-card-main";
-        details.append(
-            createText(
-                "h3",
-                teacher.full_name,
-                "teacher-card-name"
-            ),
-            createText(
-                "p",
-                teacher.department || "Department not listed",
-                "teacher-card-meta"
-            )
-        );
-
-        if (teacher.photo_path) {
-            const image = document.createElement("img");
-            image.className = "teacher-profile-avatar";
-            image.src = teacher.photo_path;
-            image.alt = `${teacher.full_name}'s profile photo`;
-            image.addEventListener("error", () => image.remove());
-            card.append(image);
-        }
-
-        card.append(
-            details,
-            createButton(
-                "View available slots",
-                async () => {
-                    await selectTeacher(teacher);
-                },
-                "secondary-button select-teacher-button"
-            )
-        );
-
-        teacherResults.append(card);
+    const matches = teachers.filter((person) => {
+        const text = [person.full_name, person.department].join(" ").toLowerCase();
+        return query.split(/\s+/).every((word) => text.includes(word));
     });
-}
 
-async function loadTeachers() {
-    teacherResults.replaceChildren(
-        createText("p", "Loading teachers...", "empty-state")
-    );
+    results.hidden = !opened || matches.length === 0;
+    results.replaceChildren();
 
-    try {
-        teachers = await rpcCall("get_teachers", { token });
+    browse.setAttribute("aria-expanded", String(opened));
+    browse.textContent = opened ? "Hide names" : "Browse names";
+    status("directory-status", opened && !matches.length ? "No teachers found." : "");
 
-        requestTeacherSelect.replaceChildren();
+    if (results.hidden) return;
 
-        const prompt = document.createElement("option");
-        prompt.value = "";
-        prompt.textContent = "Choose a teacher";
-        requestTeacherSelect.append(prompt);
-
-        teachers.forEach((teacher) => {
-            const option = document.createElement("option");
-            option.value = teacher.id;
-            option.textContent = teacher.department
-                ? `${teacher.full_name} — ${teacher.department}`
-                : teacher.full_name;
-
-            requestTeacherSelect.append(option);
-        });
-
-        renderTeachers();
-    } catch (error) {
-        teacherResults.replaceChildren(
-            createText(
-                "p",
-                `Could not load teachers: ${error.message}`,
-                "empty-state"
-            )
+    for (const person of matches) {
+        const option = button("", () => chooseTeacher(person), "teacher-option");
+        option.disabled = bookingBusy;
+        option.append(
+            node("strong", person.full_name || "Teacher"),
+            node("small", person.department || ""),
         );
+        results.append(option);
     }
 }
 
-async function loadAvailableSlots() {
-    availableSlots.replaceChildren(
-        createText(
-            "p",
-            "Loading available slots...",
-            "empty-state"
-        )
-    );
-
+async function loadDirectory() {
     try {
-        slots = await rpcCall("get_available_slots", { token });
-
-        if (selectedTeacher) {
-            renderSelectedTeacherSlots();
-        }
+        teachers = await api("get_teachers");
+        teachers.sort((a, b) => (a.full_name || "").localeCompare(b.full_name || ""));
+        renderDirectory();
     } catch (error) {
-        availableSlots.replaceChildren(
-            createText(
-                "p",
-                `Could not load slots: ${error.message}`,
-                "empty-state"
-            )
-        );
+        status("directory-status", "Could not load teachers. " + error.message, "error");
     }
 }
 
-async function selectTeacher(teacher) {
-    selectedTeacher = teacher;
-    selectedTeacherName.textContent = teacher.full_name;
-    selectedTeacherPanel.hidden = false;
-    availableSlots.hidden = false;
-    showMessage("");
+function toggleRequest(open) {
+    request.hidden = !open;
+    get("toggle-request").setAttribute("aria-expanded", String(open));
+
+    if (open) {
+        dateInput.min = localDate();
+        dateInput.focus();
+    }
+}
+
+function resetRequest() {
+    request.reset();
+    get("preferred-date-text").textContent = "DD/MM/YYYY";
+    toggleRequest(false);
+}
+
+async function chooseTeacher(person) {
+    teacher = person;
+    browseOpen = false;
+    search.value = "";
+
+    renderDirectory();
+    resetRequest();
+
+    const identity = get("teacher-identity");
+    const details = node("div");
+    details.append(
+        node("h3", person.full_name || "Teacher"),
+        node("small", person.department || ""),
+    );
+
+    identity.replaceChildren(avatar(person), details);
+    get("selected-teacher").hidden = false;
+    get("change-teacher").focus();
+
+    status("booking-status", "");
+    await loadSlots();
+}
+
+async function loadSlots() {
+    if (!teacher) return;
+
+    const version = ++selectionVersion;
+    const teacherId = teacher.id;
+    const container = get("teacher-slots");
+
+    activeSlot = null;
+    book.disabled = true;
+    container.replaceChildren(node("p", "Loading available times…", "muted"));
+
+    try {
+        const slots = await api("get_available_slots");
+        if (version !== selectionVersion) return;
+        renderSlots(slots.filter((item) => item.teacher_id === teacherId));
+    } catch (error) {
+        if (version !== selectionVersion) return;
+        container.replaceChildren(node("p", error.message, "muted"));
+        container.append(button("Retry", loadSlots));
+    }
+}
+
+function renderSlots(slots) {
+    const container = get("teacher-slots");
+    container.replaceChildren();
 
     if (!slots.length) {
-        await loadAvailableSlots();
-    } else {
-        renderSelectedTeacherSlots();
-    }
-
-    selectedTeacherPanel.scrollIntoView({
-        behavior: "smooth",
-        block: "nearest",
-    });
-}
-
-function renderSelectedTeacherSlots() {
-    availableSlots.replaceChildren();
-
-    const teacherSlots = slots.filter(
-        (slot) => slot.teacher_id === selectedTeacher.id
-    );
-
-    if (!teacherSlots.length) {
-        availableSlots.append(
-            createText(
-                "p",
-                "This teacher has no available slots right now.",
-                "empty-state"
-            )
+        container.append(
+            node("p", "No times available. You can request another time below.", "muted"),
         );
         return;
     }
 
-    teacherSlots.forEach((slot) => {
-        const card = document.createElement("article");
-        card.className = "slot-item";
+    const days = new Map();
 
-        const details = document.createElement("div");
-        details.className = "slot-details";
-        details.append(
-            createText(
-                "p",
-                formatDateTime(slot.starts_at),
-                "slot-title"
-            ),
-            createText(
-                "p",
-                `Until ${formatDateTime(slot.ends_at)}`,
-                "slot-meta"
-            )
-        );
+    for (const slot of slots) {
+        const day = dateFormat.format(new Date(slot.starts_at));
+        if (!days.has(day)) days.set(day, []);
+        days.get(day).push(slot);
+    }
 
-        card.append(
-            details,
-            createButton(
-                "Book this slot",
-                async (event) => {
-                    const button = event.currentTarget;
-                    button.disabled = true;
-                    button.textContent = "Booking...";
+    const dates = node("div", "", "slot-options");
+    const times = node("div", "", "slot-options");
 
-                    try {
-                        const result = await rpcCall("book_slot", {
-                            token,
-                            slot_id: slot.id,
-                        });
+    dates.setAttribute("aria-label", "Available dates");
+    times.setAttribute("aria-label", "Available times");
 
-                        showMessage(result.message, "success");
+    function showTimes(day, selection) {
+        activeSlot = null;
+        book.disabled = true;
 
-                        await Promise.all([
-                            loadAvailableSlots(),
-                            loadAppointments(),
-                        ]);
-                    } catch (error) {
-                        showMessage(error.message, "error");
-                        button.disabled = false;
-                        button.textContent = "Book this slot";
-                    }
-                },
-                "primary-button book-slot-button"
-            )
-        );
-
-        availableSlots.append(card);
-    });
-}
-
-async function loadAppointments() {
-    appointmentsList.replaceChildren(
-        createText(
-            "p",
-            "Loading your consultations...",
-            "empty-state"
-        )
-    );
-
-    try {
-        const data = await rpcCall(
-            "get_student_appointments",
-            { token }
-        );
-
-        const appointments = data.appointments || [];
-        const requests = data.requests || [];
-
-        appointmentsList.replaceChildren();
-
-        if (!appointments.length && !requests.length) {
-            appointmentsList.append(
-                createText(
-                    "p",
-                    "You have no consultations or requests yet.",
-                    "empty-state"
-                )
-            );
-            return;
+        for (const option of dates.children) {
+            option.setAttribute("aria-pressed", String(option === selection));
         }
 
-        appointments.forEach((appointment) => {
-            const card = document.createElement("article");
-            card.className = "appointment-item";
+        times.replaceChildren();
 
-            const details = document.createElement("div");
-            details.className = "appointment-details";
-            details.append(
-                createText(
-                    "h3",
-                    appointment.teacher_name,
-                    "appointment-title"
-                ),
-                createText(
-                    "p",
-                    `${formatDateTime(appointment.starts_at)} – ${formatDateTime(appointment.ends_at)}`,
-                    "appointment-meta"
-                ),
-                createText(
-                    "p",
-                    `Status: ${appointment.status}`,
-                    "appointment-meta"
-                )
-            );
+        for (const slot of days.get(day)) {
+            const time = timeFormat.format(new Date(slot.starts_at));
 
-            if (appointment.followup_summary) {
-                details.append(
-                    createText("h4", "Teacher's follow-up"),
-                    createText("p", appointment.followup_summary)
-                );
-            }
+            const option = button(time, () => {
+                activeSlot = slot;
+                book.disabled = bookingBusy;
 
-            if (appointment.followup_action_items) {
-                details.append(
-                    createText(
-                        "p",
-                        `Action items: ${appointment.followup_action_items}`
-                    )
-                );
-            }
+                for (const other of times.children) {
+                    other.setAttribute("aria-pressed", String(option === other));
+                }
+            });
 
-            card.append(details);
-            appointmentsList.append(card);
-        });
+            option.setAttribute("aria-pressed", "false");
+            option.setAttribute("aria-label", dateTime(slot.starts_at));
+            times.append(option);
+        }
+    }
 
-        requests.forEach((request) => {
-            const card = document.createElement("article");
-            card.className = "appointment-item";
+    for (const day of days.keys()) {
+        const option = button(day, () => showTimes(day, option));
+        dates.append(option);
+    }
 
-            const details = document.createElement("div");
-            details.className = "appointment-details";
-            details.append(
-                createText(
-                    "h3",
-                    request.teacher_name,
-                    "appointment-title"
-                ),
-                createText(
-                    "p",
-                    `Requested time: ${formatDateTime(request.preferred_start)}`,
-                    "appointment-meta"
-                ),
-                createText(
-                    "p",
-                    `Status: ${request.status}`,
-                    "appointment-meta"
-                )
-            );
+    container.append(dates, times);
+    showTimes(days.keys().next().value, dates.firstElementChild);
+}
 
-            if (request.message) {
-                details.append(
-                    createText(
-                        "p",
-                        `Message: ${request.message}`,
-                        "appointment-meta"
-                    )
-                );
-            }
+function setBookingBusy(busy) {
+    bookingBusy = busy;
 
-            if (request.status === "proposed" && request.proposed_start) {
-                details.append(
-                    createText(
-                        "p",
-                        `Teacher proposed: ${formatDateTime(request.proposed_start)}`,
-                        "appointment-meta"
-                    )
-                );
+    const controls = [
+        "change-teacher",
+        "toggle-request",
+        "send-request",
+        "browse-teachers",
+        "teacher-search",
+    ];
 
-                card.append(
-                    createButton(
-                        "Accept proposal",
-                        async () => {
-                            await answerProposal(request.id, true);
-                        },
-                        "primary-button"
-                    ),
-                    createButton(
-                        "Decline proposal",
-                        async () => {
-                            await answerProposal(request.id, false);
-                        }
-                    )
-                );
-            }
+    for (const id of controls) {
+        get(id).disabled = busy;
+    }
 
-            card.append(details);
-            appointmentsList.append(card);
-        });
-    } catch (error) {
-        appointmentsList.replaceChildren(
-            createText(
-                "p",
-                `Could not load consultations: ${error.message}`,
-                "empty-state"
-            )
+    book.disabled = busy || !activeSlot;
+    renderDirectory();
+}
+
+function activityCard(name, label, css) {
+    const item = node("article", "", "activity-card " + css);
+    const title = node("div", "", "activity-heading");
+
+    title.append(node("h3", name || "Teacher"), node("span", label, "badge"));
+    item.append(title);
+
+    return item;
+}
+
+function appointmentCard(appointment, past) {
+    const cancelled = appointment.status === "cancelled";
+    const label = cancelled ? "Cancelled" : past ? "Completed" : "Confirmed";
+    const item = activityCard(
+        appointment.teacher_name,
+        label,
+        cancelled ? "declined" : "confirmed",
+    );
+
+    const end = new Date(appointment.ends_at);
+    const sameDay = localDate(new Date(appointment.starts_at)) === localDate(end);
+    const endText = sameDay ? timeFormat.format(end) : dateTime(end);
+
+    item.append(node("p", `${dateTime(appointment.starts_at)}–${endText}`, "muted"));
+
+    if (appointment.followup_summary || appointment.followup_action_items) {
+        const followUp = node("details", "", "follow-up");
+        followUp.append(node("summary", "Teacher follow-up"));
+
+        if (appointment.followup_summary) {
+            followUp.append(node("p", appointment.followup_summary));
+        }
+
+        if (appointment.followup_action_items) {
+            followUp.append(node("p", "Action items: " + appointment.followup_action_items));
+        }
+
+        item.append(followUp);
+    }
+
+    return item;
+}
+
+function requestCard(record) {
+    const labels = {
+        pending: "Pending",
+        proposed: "New time proposed",
+        accepted: "Accepted",
+        declined: "Declined",
+    };
+
+    const item = activityCard(
+        record.teacher_name,
+        labels[record.status] || record.status,
+        record.status,
+    );
+
+    const timeline = node("ol", "", "timeline");
+
+    function addStep(title, value) {
+        const step = node("li");
+        step.append(node("strong", title), node("small", value));
+        timeline.append(step);
+    }
+
+    addStep("Request sent", "Preferred time · " + dateTime(record.preferred_start));
+
+    if (record.proposed_start) {
+        addStep("Teacher suggested a new time", dateTime(record.proposed_start));
+    }
+
+    if (record.status === "accepted") {
+        addStep("Request accepted", "See your confirmed consultation for the booking.");
+    }
+
+    if (record.status === "declined") {
+        addStep(
+            record.proposed_start ? "New time declined" : "Request declined",
+            record.proposed_start ? "The proposed time was not booked." : "Your request was not booked.",
         );
+    }
+
+    item.append(timeline);
+
+    if (record.message) item.append(node("p", record.message, "muted"));
+
+    if (record.status === "proposed" && record.proposed_start) {
+        const actions = node("div", "", "actions");
+        actions.append(
+            button("Accept new time", () => answerProposal(record, true, actions), "button primary"),
+            button("Decline", () => answerProposal(record, false, actions)),
+        );
+        item.append(actions);
+    }
+
+    return item;
+}
+
+async function loadActivity() {
+    const version = ++activityVersion;
+    const feed = get("activity-feed");
+    const history = get("history-feed");
+
+    try {
+        const data = await api("get_student_appointments");
+        if (version !== activityVersion) return;
+
+        const upcoming = [];
+        const active = [];
+        const past = [];
+        const now = Date.now();
+
+        for (const appointment of data.appointments || []) {
+            const ended = Date.parse(appointment.ends_at) <= now;
+            const archived = ended || appointment.status === "cancelled";
+
+            (archived ? past : upcoming).push({
+                date: Date.parse(appointment.starts_at),
+                element: appointmentCard(appointment, ended),
+            });
+        }
+
+        for (const record of data.requests || []) {
+            const entry = {
+                date: Date.parse(record.preferred_start),
+                element: requestCard(record),
+            };
+
+            if (
+                record.status === "accepted" ||
+                (record.status === "pending" && entry.date <= now) ||
+                (record.status === "proposed" && Date.parse(record.proposed_start) <= now)
+            ) {
+                past.push(entry);
+            } else {
+                active.push(entry);
+            }
+        }
+
+        upcoming.sort((a, b) => a.date - b.date);
+        past.sort((a, b) => b.date - a.date);
+
+        const scheduled = [...upcoming, ...active];
+        feed.replaceChildren(...scheduled.map((entry) => entry.element));
+
+        if (!scheduled.length) {
+            feed.append(node("p", "No upcoming consultations or active requests.", "muted"));
+        }
+
+        history.replaceChildren(...past.map((entry) => entry.element));
+        get("consultation-history").hidden = past.length === 0;
+        get("history-count").textContent = past.length ? "(" + past.length + ")" : "";
+    } catch (error) {
+        if (version !== activityVersion) return;
+        feed.replaceChildren(node("p", "Could not load consultations. " + error.message, "muted"));
     }
 }
 
-async function answerProposal(requestId, accept) {
+async function answerProposal(record, accept, actions) {
+    if (activityBusy) return;
+
+    activityBusy = true;
+    for (const control of actions.children) control.disabled = true;
+
     try {
-        const result = await rpcCall("respond_to_proposal", {
-            token,
-            request_id: requestId,
+        await api("respond_to_proposal", {
+            request_id: record.id,
             accept,
         });
 
-        showMessage(result.message, "success");
-        await loadAppointments();
+        status(
+            "student-status",
+            accept ? "New time confirmed." : "Proposed time declined.",
+            "success",
+        );
+
+        await Promise.all([loadActivity(), loadSlots()]);
     } catch (error) {
-        showMessage(error.message, "error");
+        status("student-status", error.message, "error");
+    } finally {
+        activityBusy = false;
+        for (const control of actions.children) control.disabled = false;
     }
 }
 
-requestForm.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    showMessage("Sending your request...");
+search.addEventListener("input", renderDirectory);
 
-    try {
-        const preferredStart = toIsoDateTime(
-            preferredDate.value,
-            preferredTime.value
-        );
+search.addEventListener("keydown", (event) => {
+    if (event.key === "ArrowDown" && !results.hidden) {
+        event.preventDefault();
+        results.querySelector("button:not(:disabled)")?.focus();
+    }
 
-        const result = await rpcCall("request_consultation", {
-            token,
-            teacher_id: requestTeacherSelect.value,
-            preferred_start: preferredStart,
-            message: requestMessage.value.trim(),
-        });
+    if (event.key === "Enter" && !results.hidden && results.children.length === 1) {
+        event.preventDefault();
+        results.firstElementChild.click();
+    }
 
-        showMessage(result.message, "success");
-        requestForm.reset();
-        preferredDateDisplay.value = "";
-
-        await loadAppointments();
-    } catch (error) {
-        showMessage(error.message, "error");
+    if (event.key === "Escape") {
+        search.value = "";
+        browseOpen = false;
+        renderDirectory();
     }
 });
 
-preferredDate.min = localToday();
-
-preferredDate.addEventListener("change", () => {
-    preferredDateDisplay.value =
-        formatInputDate(preferredDate.value);
+browse.addEventListener("click", () => {
+    const isOpen = browseOpen || Boolean(search.value.trim());
+    search.value = "";
+    browseOpen = !isOpen;
+    renderDirectory();
 });
 
-preferredDateDisplay.addEventListener("click", () => {
-    openDatePicker(preferredDate);
+get("change-teacher").addEventListener("click", () => {
+    teacher = null;
+    activeSlot = null;
+    selectionVersion += 1;
+    get("selected-teacher").hidden = true;
+
+    browseOpen = true;
+    renderDirectory();
+    search.focus();
 });
 
-teacherSearch.addEventListener("input", renderTeachers);
+book.addEventListener("click", async () => {
+    if (bookingBusy || !activeSlot) return;
 
-refreshSlotsButton.addEventListener("click", async () => {
-    await loadAvailableSlots();
-    showMessage("Available slots refreshed.", "success");
+    setBookingBusy(true);
+    status("booking-status", "Booking your time…");
+
+    try {
+        const result = await api("book_slot", { slot_id: activeSlot.id });
+        status("booking-status", result.message, "success");
+        await Promise.all([loadSlots(), loadActivity()]);
+    } catch (error) {
+        status("booking-status", error.message, "error");
+        await loadSlots();
+    } finally {
+        setBookingBusy(false);
+    }
 });
 
-changeTeacherButton.addEventListener("click", () => {
-    selectedTeacher = null;
-    selectedTeacherPanel.hidden = true;
-    availableSlots.hidden = true;
-    availableSlots.replaceChildren();
+get("toggle-request").addEventListener("click", () => {
+    toggleRequest(request.hidden);
+    status("booking-status", "");
 });
 
-logoutButton.addEventListener("click", async () => {
-    logoutButton.disabled = true;
-    logoutButton.textContent = "Logging out...";
+dateInput.addEventListener("change", () => {
+    get("preferred-date-text").textContent =
+        dateInput.value.split("-").reverse().join("/") || "DD/MM/YYYY";
+});
+
+dateInput.addEventListener("click", () => {
+    try {
+        dateInput.showPicker?.();
+    } catch {
+        // Use the browser's native date picker.
+    }
+});
+
+request.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (bookingBusy || !teacher) return;
+
+    setBookingBusy(true);
+
+    try {
+        const start = new Date(dateInput.value + "T" + get("preferred-time").value);
+
+        if (Number.isNaN(start.getTime()) || start <= new Date()) {
+            throw new Error("Choose a future date and time.");
+        }
+
+        const result = await api("request_consultation", {
+            teacher_id: teacher.id,
+            preferred_start: start.toISOString(),
+            message: get("request-message").value.trim(),
+        });
+
+        resetRequest();
+        status("booking-status", result.message, "success");
+        await loadActivity();
+    } catch (error) {
+        status("booking-status", error.message, "error");
+    } finally {
+        setBookingBusy(false);
+        if (request.hidden) get("toggle-request").focus();
+    }
+});
+
+get("refresh-activity").addEventListener("click", async (event) => {
+    const control = event.currentTarget;
+    control.disabled = true;
+
+    try {
+        await Promise.all([loadDirectory(), loadActivity(), loadSlots()]);
+    } finally {
+        control.disabled = false;
+    }
+});
+
+get("logout-button").addEventListener("click", async (event) => {
+    event.currentTarget.disabled = true;
 
     try {
         await logoutUser();
@@ -603,9 +589,9 @@ logoutButton.addEventListener("click", async () => {
     }
 });
 
-async function startStudentPage() {
-    if (!token) {
-        window.location.replace("/index.html");
+async function start() {
+    if (!getSessionToken()) {
+        window.location.replace("/student-login.html");
         return;
     }
 
@@ -614,25 +600,19 @@ async function startStudentPage() {
 
         if (user.role !== "student") {
             window.location.replace(
-                user.role === "teacher"
-                    ? "/teacher.html"
-                    : "/index.html"
+                user.role === "teacher" ? "/teacher.html" : "/student-login.html",
             );
             return;
         }
 
-        studentName.textContent = user.full_name || "Student";
-        setAvatar(user);
+        get("student-name").textContent = user.full_name || "Student";
+        get("student-workspace").hidden = false;
+        status("student-status", "");
 
-        await Promise.all([
-            loadTeachers(),
-            loadAppointments(),
-        ]);
+        await Promise.all([loadDirectory(), loadActivity()]);
     } catch (error) {
-        console.error("Could not start student page:", error);
-        sessionStorage.removeItem("campusconnect_session_token");
-        window.location.replace("/index.html");
+        status("student-status", "Could not sign you in. " + error.message, "error");
     }
 }
 
-startStudentPage();
+await start();

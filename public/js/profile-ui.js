@@ -199,7 +199,7 @@ function createDialog() {
                     </div>
 
                     <div class="profile-field">
-                        <label for="profile-id">Student / Teacher ID</label>
+                        <label for="profile-id" id="profile-id-label">ID</label>
                         <input id="profile-id" readonly>
                     </div>
 
@@ -325,6 +325,7 @@ export function initializeProfileUI({
 
     const nameInput = document.getElementById("profile-name");
     const emailInput = document.getElementById("profile-email");
+    const idLabel = document.getElementById("profile-id-label");
     const idInput = document.getElementById("profile-id");
     const phoneInput = document.getElementById("profile-phone");
     const departmentInput = document.getElementById("profile-department");
@@ -338,6 +339,7 @@ export function initializeProfileUI({
     function fill(user) {
         nameInput.value = user.full_name || "";
         emailInput.value = user.email || "";
+        idLabel.textContent = user.role === "teacher" ? "Teacher ID" : "Student ID";
         idInput.value = user.student_id || "";
         phoneInput.value = user.phone_number || "";
         departmentInput.value = user.department || "";

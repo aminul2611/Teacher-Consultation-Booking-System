@@ -11,7 +11,6 @@ from auth import (
     setup_auth_database,
     update_profile,
 )
-
 from booking import (
     add_teacher_slot,
     book_slot,
@@ -19,6 +18,7 @@ from booking import (
     get_student_appointments,
     get_teacher_completed_appointments,
     get_teacher_requests,
+    get_teacher_schedule,
     get_teacher_slots,
     get_teachers,
     request_consultation,
@@ -33,8 +33,6 @@ PROJECT_DIR = Path(__file__).resolve().parent
 PUBLIC_DIR = PROJECT_DIR / "public"
 HOST = "0.0.0.0"
 PORT = int(os.environ.get("PORT", "8000"))
-
-# Allows a profile image up to 2 MB after base64 encoding and JSON overhead.
 MAX_REQUEST_BYTES = 3_000_000
 
 ALLOWED_ORIGINS = {
@@ -42,7 +40,7 @@ ALLOWED_ORIGINS = {
     for origin in os.environ.get(
         "CORS_ORIGINS",
         "http://localhost:8000,http://127.0.0.1:8000,"
-        "http://localhost:5500,http://127.0.0.1:5500"
+        "http://localhost:5500,http://127.0.0.1:5500",
     ).split(",")
     if origin.strip()
 }
@@ -51,6 +49,8 @@ ALLOWED_ORIGINS = {
 def run_rpc_method(method, params):
     if not isinstance(params, dict):
         raise ValueError("RPC parameters must be sent as a JSON object.")
+
+    token = params.get("token", "")
 
     if method == "register_user":
         return register_user(
@@ -72,7 +72,7 @@ def run_rpc_method(method, params):
 
     if method == "update_profile":
         return update_profile(
-            token=params.get("token", ""),
+            token=token,
             full_name=params.get("full_name", ""),
             phone_number=params.get("phone_number", ""),
             department=params.get("department", ""),
@@ -80,18 +80,19 @@ def run_rpc_method(method, params):
         )
 
     if method == "get_profile":
-        return get_user_from_token(params.get("token", ""))
+        return get_user_from_token(token)
 
     if method in ("logout", "logout_user"):
-        return logout_user(params.get("token", ""))
-
-    token = params.get("token", "")
+        return logout_user(token)
 
     if method == "get_available_slots":
         return get_available_slots(token)
 
     if method == "get_teachers":
         return get_teachers(token)
+
+    if method == "get_teacher_schedule":
+        return get_teacher_schedule(token)
 
     if method == "get_teacher_slots":
         return get_teacher_slots(token)
@@ -104,10 +105,7 @@ def run_rpc_method(method, params):
         )
 
     if method == "book_slot":
-        return book_slot(
-            token=token,
-            slot_id=params.get("slot_id"),
-        )
+        return book_slot(token=token, slot_id=params.get("slot_id"))
 
     if method == "request_consultation":
         return request_consultation(
@@ -123,7 +121,7 @@ def run_rpc_method(method, params):
     if method == "respond_to_request":
         return respond_to_request(
             token=token,
-            request_id=params.get("request_id"),
+            request_id=params.get("request_id", ""),
             action=params.get("action", ""),
             proposed_start=params.get("proposed_start", ""),
         )
@@ -131,7 +129,7 @@ def run_rpc_method(method, params):
     if method == "respond_to_proposal":
         return respond_to_proposal(
             token=token,
-            request_id=params.get("request_id"),
+            request_id=params.get("request_id", ""),
             accept=params.get("accept", False),
         )
 
@@ -154,26 +152,15 @@ def run_rpc_method(method, params):
 
 class CampusConnectHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
-        super().__init__(
-            *args,
-            directory=str(PUBLIC_DIR),
-            **kwargs,
-        )
+        super().__init__(*args, directory=str(PUBLIC_DIR), **kwargs)
 
     def _add_cors_headers(self):
         origin = self.headers.get("Origin", "")
-
         if origin in ALLOWED_ORIGINS:
             self.send_header("Access-Control-Allow-Origin", origin)
             self.send_header("Vary", "Origin")
-            self.send_header(
-                "Access-Control-Allow-Headers",
-                "Content-Type",
-            )
-            self.send_header(
-                "Access-Control-Allow-Methods",
-                "GET, POST, OPTIONS",
-            )
+            self.send_header("Access-Control-Allow-Headers", "Content-Type")
+            self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 
     def do_OPTIONS(self):
         self.send_response(204)
@@ -182,44 +169,29 @@ class CampusConnectHandler(SimpleHTTPRequestHandler):
 
     def do_POST(self):
         if self.path.rstrip("/") != "/rpc":
-            self._send_json({
-                "jsonrpc": "2.0",
-                "id": None,
-                "error": {
-                    "code": -32600,
-                    "message": "RPC requests must use the /rpc path.",
-                },
-            }, status=404)
+            self._send_error_json(
+                None, -32600, "RPC requests must use the /rpc path.", status=404,
+            )
             return
 
         request_id = None
-
         try:
-            content_length = int(
-                self.headers.get("Content-Length", "0")
-            )
+            content_length = int(self.headers.get("Content-Length", "0"))
 
             if content_length <= 0:
                 raise ValueError("The request body is missing.")
-
             if content_length > MAX_REQUEST_BYTES:
                 raise ValueError(
-                    "The request is too large. Profile pictures must be "
-                    "2 MB or smaller."
+                    "The request is too large. Profile pictures must be 2 MB or smaller."
                 )
 
             raw_body = self.rfile.read(content_length)
             request = json.loads(raw_body.decode("utf-8"))
 
             if not isinstance(request, dict):
-                raise ValueError(
-                    "The RPC request must be a JSON object."
-                )
-
+                raise ValueError("The RPC request must be a JSON object.")
             if request.get("jsonrpc") != "2.0":
-                raise ValueError(
-                    "The request must use JSON-RPC 2.0."
-                )
+                raise ValueError("The request must use JSON-RPC 2.0.")
 
             request_id = request.get("id")
             method = request.get("method")
@@ -229,63 +201,30 @@ class CampusConnectHandler(SimpleHTTPRequestHandler):
                 raise ValueError("An RPC method name is required.")
 
             result = run_rpc_method(method, params)
+            self._send_json({"jsonrpc": "2.0", "id": request_id, "result": result})
 
-            self._send_json({
-                "jsonrpc": "2.0",
-                "id": request_id,
-                "result": result,
-            })
-
-        except json.JSONDecodeError:
-            self._send_json({
-                "jsonrpc": "2.0",
-                "id": request_id,
-                "error": {
-                    "code": -32700,
-                    "message": "The request contains invalid JSON.",
-                },
-            })
-
-        except LookupError as error:
-            self._send_json({
-                "jsonrpc": "2.0",
-                "id": request_id,
-                "error": {
-                    "code": -32601,
-                    "message": str(error),
-                },
-            })
-
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            self._send_error_json(request_id, -32700, "The request contains invalid JSON.")
         except (ValueError, TypeError, KeyError) as error:
-            self._send_json({
-                "jsonrpc": "2.0",
-                "id": request_id,
-                "error": {
-                    "code": -32602,
-                    "message": str(error),
-                },
-            })
-
+            self._send_error_json(request_id, -32602, str(error))
+        except LookupError as error:
+            self._send_error_json(request_id, -32601, str(error))
         except Exception:
-            self._send_json({
-                "jsonrpc": "2.0",
-                "id": request_id,
-                "error": {
-                    "code": -32603,
-                    "message": "An internal server error occurred.",
-                },
-            })
+            self._send_error_json(request_id, -32603, "An internal server error occurred.")
+
+    def _send_error_json(self, request_id, code, message, status=200):
+        self._send_json({
+            "jsonrpc": "2.0",
+            "id": request_id,
+            "error": {"code": code, "message": message},
+        }, status=status)
 
     def _send_json(self, data, status=200):
         response_body = json.dumps(data).encode("utf-8")
-
         self.send_response(status)
-        self.send_header(
-            "Content-Type",
-            "application/json; charset=utf-8",
-        )
-        self.send_header("Content-Length", str(len(response_body)))
         self._add_cors_headers()
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(response_body)))
         self.end_headers()
         self.wfile.write(response_body)
 
@@ -297,11 +236,7 @@ def main():
     setup_auth_database()
     setup_booking_database()
 
-    server = ThreadingHTTPServer(
-        (HOST, PORT),
-        CampusConnectHandler,
-    )
-
+    server = ThreadingHTTPServer((HOST, PORT), CampusConnectHandler)
     print(f"CampusConnect server is running at http://localhost:{PORT}")
     print(f"JSON-RPC endpoint: http://localhost:{PORT}/rpc")
 
