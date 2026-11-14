@@ -148,6 +148,15 @@ function formatInputDate(value) {
     return `${day}/${month}/${year}`;
 }
 
+function localToday() {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const day = String(today.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+}
+
 function renderTeachers() {
     const query = teacherSearch.value.trim().toLowerCase();
 
@@ -558,7 +567,7 @@ requestForm.addEventListener("submit", async (event) => {
     }
 });
 
-preferredDate.min = new Date().toISOString().slice(0, 10);
+preferredDate.min = localToday();
 
 preferredDate.addEventListener("change", () => {
     preferredDateDisplay.value =

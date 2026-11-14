@@ -155,27 +155,32 @@ async function loadSlots() {
     slotsList.replaceChildren(
         textElement(
             "p",
-            "Loading your available slots...",
+            "Loading your upcoming schedule...",
             "teacher-empty-state"
         )
     );
 
     try {
-        const slots = await rpcCall("get_teacher_slots", { token });
+        const allSlots = await rpcCall("get_teacher_slots", { token });
+        const now = Date.now();
+        const upcomingSlots = allSlots.filter(
+            (slot) => new Date(slot.ends_at).getTime() > now
+        );
+
         slotsList.replaceChildren();
 
-        if (!slots.length) {
+        if (!upcomingSlots.length) {
             slotsList.append(
                 textElement(
                     "p",
-                    "You have not added any available times yet.",
+                    "There are no upcoming slots right now.",
                     "teacher-empty-state"
                 )
             );
             return;
         }
 
-        slots.forEach((slot) => {
+        upcomingSlots.forEach((slot) => {
             const card = document.createElement("article");
             card.className = "teacher-slot-card";
 
@@ -448,29 +453,64 @@ async function loadCompletedConsultations() {
     completedList.replaceChildren(
         textElement(
             "p",
-            "Loading completed consultations...",
+            "Loading history...",
             "teacher-empty-state"
         )
     );
 
     try {
-        const appointments = await rpcCall(
-            "get_teacher_completed_appointments",
-            { token }
+        const [appointments, allSlots] = await Promise.all([
+            rpcCall("get_teacher_completed_appointments", { token }),
+            rpcCall("get_teacher_slots", { token }),
+        ]);
+
+        const now = Date.now();
+        const expiredUnusedSlots = allSlots.filter(
+            (slot) =>
+                new Date(slot.ends_at).getTime() <= now &&
+                slot.status !== "booked"
         );
 
         completedList.replaceChildren();
 
-        if (!appointments.length) {
+        if (!appointments.length && !expiredUnusedSlots.length) {
             completedList.append(
                 textElement(
                     "p",
-                    "There are no completed consultations yet.",
+                    "There are no past slots or completed consultations yet.",
                     "teacher-empty-state"
                 )
             );
             return;
         }
+
+        expiredUnusedSlots.forEach((slot) => {
+            const card = document.createElement("article");
+            card.className = "teacher-completed-item teacher-expired-slot";
+
+            const details = document.createElement("div");
+            details.className = "teacher-completed-details";
+            details.append(
+                textElement(
+                    "h3",
+                    "Expired available slot",
+                    "teacher-completed-title"
+                ),
+                textElement(
+                    "p",
+                    `${formatDateTime(slot.starts_at)} – ${formatDateTime(slot.ends_at)}`,
+                    "teacher-completed-meta"
+                ),
+                textElement(
+                    "p",
+                    "No student booked this time.",
+                    "teacher-completed-meta"
+                )
+            );
+
+            card.append(details);
+            completedList.append(card);
+        });
 
         appointments.forEach((appointment) => {
             const card = document.createElement("article");
@@ -490,6 +530,26 @@ async function loadCompletedConsultations() {
                     "teacher-completed-meta"
                 )
             );
+
+            if (appointment.summary) {
+                details.append(
+                    textElement(
+                        "p",
+                        `Summary: ${appointment.summary}`,
+                        "teacher-completed-meta teacher-followup-preview"
+                    )
+                );
+            }
+
+            if (appointment.action_items) {
+                details.append(
+                    textElement(
+                        "p",
+                        `Action items: ${appointment.action_items}`,
+                        "teacher-completed-meta teacher-followup-preview"
+                    )
+                );
+            }
 
             const form = document.createElement("form");
             form.className = "teacher-followup-form";
@@ -514,11 +574,23 @@ async function loadCompletedConsultations() {
             const save = document.createElement("button");
             save.type = "submit";
             save.className = "teacher-primary-button";
-            save.textContent = "Save follow-up";
+            save.textContent = appointment.summary
+                ? "Update follow-up"
+                : "Save follow-up";
 
             summaryLabel.append(summary);
             actionLabel.append(actions);
             form.append(summaryLabel, actionLabel, save);
+
+            const followupDetails = document.createElement("details");
+            followupDetails.className = "teacher-followup-disclosure";
+
+            const followupToggle = document.createElement("summary");
+            followupToggle.textContent = appointment.summary
+                ? "Edit follow-up notes"
+                : "Add follow-up notes";
+
+            followupDetails.append(followupToggle, form);
 
             form.addEventListener("submit", async (event) => {
                 event.preventDefault();
@@ -544,7 +616,7 @@ async function loadCompletedConsultations() {
                 }
             });
 
-            card.append(details, form);
+            card.append(details, followupDetails);
             completedList.append(card);
         });
     } catch (error) {
