@@ -46,6 +46,20 @@ To try the booking flow, create one account in each portal using different email
 
 SQLite stores `users`, `sessions`, `teacher_slots`, `consultation_requests`, `appointments`, and `consultation_followups`. A direct booking links an appointment to a slot. An accepted request or proposal links an appointment to the original request.
 
+### System Architecture Diagram
+
+![CampusConnect System Architecture](docs/Campus%20Connect-System-Architecture%20.drawio.png)
+
+[View the Python RPC Architecture Diagram](docs/Campus%20Connect%20Python%20RPC%20Architecture.png)
+
+### Booking Workflow Diagram
+
+![CampusConnect Booking Workflow](docs/Campus%20Connect-Workflow.png)
+
+### Entity Relationship Diagram (ERD)
+
+![CampusConnect Entity Relationship Diagram](docs/Campus%20Connect-ER-Diagram.png)
+
 ## JSON-RPC example
 
 After signing in as a student, the portal can list available slots by sending this request to `POST /rpc` with the `application/json` content type. The login response supplies the session token used in `params.token`.
