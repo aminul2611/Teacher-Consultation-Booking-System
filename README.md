@@ -50,7 +50,7 @@ SQLite stores `users`, `sessions`, `teacher_slots`, `consultation_requests`, `ap
 
 ![CampusConnect System Architecture](docs/Campus%20Connect-System-Architecture%20.drawio.png)
 
-[View the Python RPC Architecture Diagram](docs/Campus%20Connect%20Python%20RPC%20Architecture.png)
+![CampusConnect Python RPC Architecture](docs/Campus%20Connect%20Python%20RPC%20Architecture.png)
 
 ### Booking Workflow Diagram
 
