@@ -50,15 +50,25 @@ SQLite stores `users`, `sessions`, `teacher_slots`, `consultation_requests`, `ap
 
 ![CampusConnect System Architecture](docs/Campus%20Connect-System-Architecture%20.drawio.png)
 
+Shows how the browser portals, Python server, SQLite database, and profile photo storage fit together.
+
+### Python RPC Architecture Diagram
+
 ![CampusConnect Python RPC Architecture](docs/Campus%20Connect%20Python%20RPC%20Architecture.png)
+
+Shows how `rpc.js` sends requests to `POST /rpc` and how the server routes each call to the appropriate Python module.
 
 ### Booking Workflow Diagram
 
 ![CampusConnect Booking Workflow](docs/Campus%20Connect-Workflow.png)
 
+Shows how students book an open slot or request another time, and how teachers respond to those requests.
+
 ### Entity Relationship Diagram (ERD)
 
 ![CampusConnect Entity Relationship Diagram](docs/Campus%20Connect-ER-Diagram.png)
+
+Shows how users, sessions, time slots, consultation requests, appointments, and follow-up notes are linked in SQLite.
 
 ## JSON-RPC example
 
